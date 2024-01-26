@@ -1,4 +1,4 @@
-package com.restaurant.models;
+package com.restaurant.models.Enums;
 
 public enum ECategory {
     BURGER,

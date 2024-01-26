@@ -3,6 +3,7 @@ package com.restaurant.models;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.restaurant.models.Enums.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -28,20 +29,20 @@ public class Order {
     @ElementCollection
     private List<String> orderedDishes;
 
-    @NotBlank
-    private String orderStatus;
+    @Enumerated(EnumType.STRING)
+    private EOrderStatus orderStatus;
 
-    @NotBlank
-    private String paymentType;
+    @Enumerated(EnumType.STRING)
+    private EPaymentType paymentType;
 
-    @NotBlank
-    private String paymentStatus;
+    @Enumerated(EnumType.STRING)
+    private EPaymentStatus paymentStatus;
 
     @NotNull
     private double totalCost;
 
-    @NotBlank
-    private String deliveryMethod;
+    @Enumerated(EnumType.STRING)
+    private EDeliveryMethod deliveryMethod;
 
     @Size(max = 255)
     private String additionalNotes;
@@ -53,7 +54,7 @@ public class Order {
     public Order() {
     }
 
-    public Order(int orderNumber, LocalDateTime orderDate, List<String> orderedDishes, String orderStatus, String paymentType, String paymentStatus, double totalCost, String deliveryMethod, String additionalNotes, String deliveryInfo) {
+    public Order(List<String> orderedDishes, EOrderStatus orderStatus, EPaymentType paymentType, EPaymentStatus paymentStatus, double totalCost, EDeliveryMethod deliveryMethod, String additionalNotes, String deliveryInfo) {
         this.orderNumber = generateOrderNumber();
         this.orderDate = LocalDateTime.now();
         this.orderedDishes = orderedDishes;
@@ -103,27 +104,27 @@ public class Order {
         this.orderedDishes = orderedDishes;
     }
 
-    public String getOrderStatus() {
+    public EOrderStatus getOrderStatus() {
         return orderStatus;
     }
 
-    public void setOrderStatus(String orderStatus) {
+    public void setOrderStatus(EOrderStatus orderStatus) {
         this.orderStatus = orderStatus;
     }
 
-    public String getPaymentType() {
+    public EPaymentType getPaymentType() {
         return paymentType;
     }
 
-    public void setPaymentType(String paymentType) {
+    public void setPaymentType(EPaymentType paymentType) {
         this.paymentType = paymentType;
     }
 
-    public String getPaymentStatus() {
+    public EPaymentStatus getPaymentStatus() {
         return paymentStatus;
     }
 
-    public void setPaymentStatus(String paymentStatus) {
+    public void setPaymentStatus(EPaymentStatus paymentStatus) {
         this.paymentStatus = paymentStatus;
     }
 
@@ -135,11 +136,11 @@ public class Order {
         this.totalCost = totalCost;
     }
 
-    public String getDeliveryMethod() {
+    public EDeliveryMethod getDeliveryMethod() {
         return deliveryMethod;
     }
 
-    public void setDeliveryMethod(String deliveryMethod) {
+    public void setDeliveryMethod(EDeliveryMethod deliveryMethod) {
         this.deliveryMethod = deliveryMethod;
     }
 

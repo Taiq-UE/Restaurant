@@ -19,7 +19,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.util.StringUtils;
@@ -27,17 +26,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import com.restaurant.models.ERole;
+import com.restaurant.models.Enums.ERole;
 import com.restaurant.models.Role;
-import com.restaurant.models.User;
-import com.restaurant.payload.LoginRequest;
 import com.restaurant.payload.SignupRequest;
-import com.restaurant.payload.JwtResponse;
 import com.restaurant.payload.MessageResponse;
-import com.restaurant.repositories.RoleRepository;
-import com.restaurant.repositories.UserRepository;
-import com.restaurant.security.jwt.JwtUtils;
-import com.restaurant.security.services.UserDetailsImpl;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController

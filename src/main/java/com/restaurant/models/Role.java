@@ -1,5 +1,6 @@
 package com.restaurant.models;
 
+import com.restaurant.models.Enums.ERole;
 import jakarta.persistence.*;
 
 @Entity

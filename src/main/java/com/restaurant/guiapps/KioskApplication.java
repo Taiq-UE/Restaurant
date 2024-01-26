@@ -3,11 +3,13 @@ package com.restaurant.guiapps;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.models.Dish;
-import com.restaurant.models.ECategory;
-import com.restaurant.models.ERole;
+import com.restaurant.models.Enums.ECategory;
+import com.restaurant.models.Enums.ERole;
 import com.restaurant.models.Role;
 import com.restaurant.models.User;
+import javafx.animation.PauseTransition;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -19,10 +21,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+import javafx.scene.media.MediaPlayer;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
+import javax.print.attribute.standard.Media;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,7 +37,8 @@ public class KioskApplication extends Application {
     private Map<Dish, Integer> cart = new HashMap<>();
     private Label totalPriceLabel = new Label("Total price: 0.00 zł");
     private VBox cartVBox = new VBox();
-
+    private VBox orderButtonBox = new VBox();
+    private TabPane tabPane = new TabPane();
     @Override
     public void start(Stage primaryStage) {
         TextField usernameField = new TextField();
@@ -47,6 +53,8 @@ public class KioskApplication extends Application {
         VBox vbox = new VBox(usernameField, passwordField, loginButton);
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
+
+        //RestTemplate restTemplate = new RestTemplate();
 
         loginButton.setOnAction(event -> {
             RestTemplate restTemplate = new RestTemplate();
@@ -69,54 +77,7 @@ public class KioskApplication extends Application {
                         .collect(Collectors.toList());
                 if (eRoles.contains(ERole.ROLE_EMPLOYEE) || eRoles.contains(ERole.ROLE_ADMIN)) {
                     vbox.getChildren().clear();
-
-                    Button cartButton = new Button("Koszyk");
-                    VBox newVbox = new VBox();
-                    newVbox.setPadding(new Insets(10));
-                    newVbox.setSpacing(8);
-
-                    ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<List<Dish>>() {});
-                    if (dishResponse.getStatusCode() == HttpStatus.OK) {
-                        List<Dish> dishes = dishResponse.getBody();
-                        assert dishes != null;
-
-                        TabPane tabPane = new TabPane();
-
-                        Tab allDishesTab = new Tab("Wszystkie");
-                        GridPane allDishesGridPane = createGridPaneForDishes(dishes);
-                        ScrollPane allDishesScrollPane = new ScrollPane(allDishesGridPane);
-                        allDishesScrollPane.setFitToWidth(true);
-                        allDishesTab.setContent(allDishesScrollPane);
-                        tabPane.getTabs().add(allDishesTab);
-
-                        for (ECategory category : ECategory.values()) {
-                            Tab tab = new Tab(category.name());
-                            GridPane gridPane = createGridPaneForDishes(dishes.stream()
-                                    .filter(dish -> dish.getCategory() == category)
-                                    .collect(Collectors.toList()));
-                            ScrollPane scrollPane = new ScrollPane(gridPane);
-                            scrollPane.setFitToWidth(true);
-                            tab.setContent(scrollPane);
-                            tabPane.getTabs().add(tab);
-                        }
-
-                        Tab cartTab = new Tab("Koszyk");
-                        //ListView<String> cartListView = new ListView<>();
-                        cartTab.setContent(cartVBox);
-                        tabPane.getTabs().add(cartTab);
-
-                        cartButton.setOnAction(cartEvent -> {
-                            tabPane.getSelectionModel().select(cartTab);
-                        });
-
-                        newVbox.getChildren().add(tabPane);
-                        newVbox.getChildren().add(totalPriceLabel);
-                        newVbox.getChildren().add(cartButton);
-
-                        Scene scene = new Scene(newVbox, 620, 820);
-                        primaryStage.setScene(scene);
-                        primaryStage.show();
-                    }
+                    postLoginProcess(vbox, primaryStage, restTemplate);
                 }
             }
         });
@@ -186,11 +147,24 @@ public class KioskApplication extends Application {
         return gridPane;
     }
 
+    private Label totalCaloriesLabel = new Label("Total calories: 0 kcal");
     private void updateTotalPrice() {
         double totalPrice = cart.entrySet().stream().mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue()).sum();
         totalPriceLabel.setText("Total price: " + String.format("%.2f", totalPrice) + " zł");
         totalPriceLabel.setFont(new Font(20));
+
+        int totalCalories = cart.entrySet().stream().mapToInt(entry -> entry.getKey().getCalories() * entry.getValue()).sum();
+        totalCaloriesLabel.setText("Total calories: " + totalCalories + " kcal");
+        totalCaloriesLabel.setFont(new Font(20));
+
         updateCartView();
+
+        // Check if the cart is empty
+        boolean isCartEmpty = cart.isEmpty();
+
+        // Set the disabled property of the "Place Order" button based on whether the cart is empty
+        Button placeOrderButton = (Button) orderButtonBox.getChildren().get(0);
+        placeOrderButton.setDisable(isCartEmpty);
     }
 
     private void updateCartView() {
@@ -203,7 +177,7 @@ public class KioskApplication extends Application {
             Button removeButton = new Button("Usuń");
             removeButton.setOnAction(event -> {
                 cart.remove(dish);
-                updateTotalPrice();
+                updateTotalPrice(); // Aktualizujemy widok koszyka po usunięciu produktu
             });
 
             Button changeQuantityButton = new Button("Zmień ilość");
@@ -236,6 +210,161 @@ public class KioskApplication extends Application {
             HBox dishBox = new HBox(dishLabel, removeButton, changeQuantityButton);
             dishBox.setSpacing(10);
             cartVBox.getChildren().add(dishBox);
+        }
+        cartVBox.getChildren().add(orderButtonBox);
+    }
+
+    private void postLoginProcess(VBox vbox, Stage primaryStage, RestTemplate restTemplate) {
+        Button cartButton = new Button("Koszyk");
+        VBox newVbox = new VBox();
+        newVbox.setPadding(new Insets(10));
+        newVbox.setSpacing(8);
+
+        Button placeOrderButton = new Button("Złóż zamówienie");
+        placeOrderButton.setOnAction(placeOrderEvent -> {
+            Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmationAlert.setTitle("Potwierdzenie zamówienia");
+            confirmationAlert.setHeaderText("Czy na pewno chcesz złożyć zamówienie?");
+
+            Optional<ButtonType> result = confirmationAlert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+
+                // Użytkownik potwierdził zamówienie, więc zmieniamy całe obecne okno
+                newVbox.getChildren().clear();
+
+                Button payWithCardButton = new Button("Zapłać kartą");
+                Button payWithCashButton = new Button("Zapłać gotówką w kasie");
+                Button cancelOrderButton = new Button("Anuluj zamówienie");
+
+                newVbox.getChildren().addAll(payWithCardButton, payWithCashButton, cancelOrderButton);
+
+// Tworzymy nową instancję VBox i kopiujemy do niej zawartość newVbox
+                VBox newSceneVbox = new VBox();
+                newSceneVbox.getChildren().addAll(newVbox.getChildren());
+
+// Ustawiamy odstęp między elementami na nowym VBox
+                newSceneVbox.setSpacing(10);
+
+                Scene scene = new Scene(newSceneVbox, 620, 820);
+                primaryStage.setScene(scene);
+                primaryStage.show();
+
+                cancelOrderButton.setOnAction(cancelEvent -> {
+                    // Użytkownik anulował zamówienie, więc wracamy do menu głównego z wyzerowanym koszykiem
+                    cart.clear();
+                    updateTotalPrice();
+                    newVbox.getChildren().clear();
+                    postLoginProcess(vbox, primaryStage, restTemplate);
+                });
+
+                payWithCardButton.setOnAction(event -> {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Płatność kartą");
+                    alert.setHeaderText("Postępuj zgodnie z instrukcjami na terminalu");
+                    alert.show();
+
+                    PauseTransition delay = new PauseTransition(Duration.seconds(3));
+                    delay.setOnFinished( eventBox -> alert.close() );
+                    delay.play();
+
+                    // Odtwarzanie dźwięku
+                    javafx.scene.media.Media sound = new javafx.scene.media.Media(getClass().getResource("/sounds/payment.mp3").toExternalForm());
+                    MediaPlayer mediaPlayer = new MediaPlayer(sound);
+                    mediaPlayer.play();
+
+
+                    delay.setOnFinished( eventDelay -> {
+                        Platform.runLater(() -> {
+                            Alert transactionAlert = new Alert(Alert.AlertType.INFORMATION);
+                            transactionAlert.setTitle("Płatność kartą");
+                            transactionAlert.setHeaderText("Transakcja przebiegła pomyślnie");
+                            transactionAlert.setContentText("Odbierz paragon i numer zamówienia");
+                            transactionAlert.showAndWait();
+
+                            PauseTransition delayAfterAlert = new PauseTransition(Duration.seconds(3));
+                            delayAfterAlert.setOnFinished(eventAfterAlert -> {
+                                cart.clear();
+                                updateTotalPrice();
+                                newVbox.getChildren().clear();
+                                postLoginProcess(vbox, primaryStage, restTemplate);
+                            });
+                            delayAfterAlert.play();
+                        });
+                    });
+                    delay.play();
+                });
+
+//                newVbox.setSpacing(10);
+//                newVbox.getChildren().addAll(payWithCardButton, payWithCashButton, cancelOrderButton);
+//
+//
+//
+//                VBox newSceneVbox = new VBox();
+//                newSceneVbox.getChildren().addAll(newVbox.getChildren());
+//
+//                Scene scene = new Scene(newSceneVbox, 620, 820);
+//                primaryStage.setScene(scene);
+//                primaryStage.show();
+            }
+        });
+
+        if (orderButtonBox.getChildren().isEmpty()) {
+            orderButtonBox.getChildren().add(placeOrderButton);
+        }
+
+        Tab cartTab = new Tab("Koszyk");
+
+        ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<List<Dish>>() {});
+        if (dishResponse.getStatusCode() == HttpStatus.OK) {
+            List<Dish> dishes = dishResponse.getBody();
+            assert dishes != null;
+
+            TabPane tabPane = new TabPane();
+
+            Tab allDishesTab = new Tab("Wszystkie");
+            GridPane allDishesGridPane = createGridPaneForDishes(dishes);
+            ScrollPane allDishesScrollPane = new ScrollPane(allDishesGridPane);
+            allDishesScrollPane.setFitToWidth(true);
+            allDishesTab.setContent(allDishesScrollPane);
+            tabPane.getTabs().add(allDishesTab);
+
+            for (ECategory category : ECategory.values()) {
+                Tab tab = new Tab(category.name());
+                GridPane gridPane = createGridPaneForDishes(dishes.stream()
+                        .filter(dish -> dish.getCategory() == category)
+                        .collect(Collectors.toList()));
+                ScrollPane scrollPane = new ScrollPane(gridPane);
+                scrollPane.setFitToWidth(true);
+                tab.setContent(scrollPane);
+                tabPane.getTabs().add(tab);
+            }
+
+            cartTab.setContent(cartVBox);
+            tabPane.getTabs().add(cartTab);
+
+            cartButton.setOnAction(cartEvent -> {
+                tabPane.getSelectionModel().select(cartTab);
+            });
+
+            newVbox.getChildren().add(tabPane);
+            newVbox.getChildren().add(totalPriceLabel);
+            newVbox.getChildren().add(totalCaloriesLabel);
+            newVbox.getChildren().add(cartButton);
+
+            Scene scene = new Scene(newVbox, 620, 820);
+            primaryStage.setScene(scene);
+            primaryStage.show();
+        }
+    }
+
+    private void createMenuScreen(VBox vbox) {
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<List<Dish>>() {});
+        if (dishResponse.getStatusCode() == HttpStatus.OK) {
+            List<Dish> dishes = dishResponse.getBody();
+            assert dishes != null;
+            GridPane gridPane = createGridPaneForDishes(dishes);
+            vbox.getChildren().add(gridPane);
         }
     }
 

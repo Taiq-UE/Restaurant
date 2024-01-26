@@ -1,12 +1,12 @@
 package com.restaurant.models;
 
+import com.restaurant.models.Enums.ECategory;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
-import java.util.Locale;
 
 @Entity
 @Table(name = "dishes")
