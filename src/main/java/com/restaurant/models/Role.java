@@ -17,6 +17,10 @@ public class Role {
 
     }
 
+    public Role(String name) {
+        this.name = ERole.valueOf(name);
+    }
+
     public Role(ERole name) {
         this.name = name;
     }

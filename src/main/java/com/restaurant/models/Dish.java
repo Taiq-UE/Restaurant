@@ -20,21 +20,23 @@ public class Dish {
     private String dishName;
 
     @NotNull
-    private double price;
+    private Double price;
 
     @NotNull
-    private int calories;
+    private Integer calories;
 
     @Enumerated(EnumType.STRING)
     private ECategory category;
 
     @NotNull
-    private boolean isAvailable;
+    private Boolean isAvailable;
+
+    private String imageAddress;
 
     public Dish() {
     }
 
-    public Dish(String dishName, double price, int calories, ECategory category, String description, List<String> ingredients, boolean isAvailable) {
+    public Dish(String dishName, Double price, Integer calories, ECategory category, String description, List<String> ingredients, Boolean isAvailable) {
         this.dishName = dishName;
         this.price = price;
         this.calories = calories;
@@ -58,19 +60,19 @@ public class Dish {
         this.dishName = dishName;
     }
 
-    public double getPrice() {
+    public Double getPrice() {
         return price;
     }
 
-    public void setPrice(double price) {
+    public void setPrice(Double price) {
         this.price = price;
     }
 
-    public int getCalories() {
+    public Integer getCalories() {
         return calories;
     }
 
-    public void setCalories(int calories) {
+    public void setCalories(Integer calories) {
         this.calories = calories;
     }
 
@@ -82,11 +84,20 @@ public class Dish {
         this.category = category;
     }
 
-    public boolean isAvailable() {
+    public Boolean getIsAvailable() {
         return isAvailable;
     }
 
-    public void setAvailable(boolean available) {
+    public void setIsAvailable(Boolean available) {
         isAvailable = available;
     }
+
+    public String getImageAddress() {
+        return imageAddress;
+    }
+
+    public void setImageAddress(String imageAddress) {
+        this.imageAddress = imageAddress;
+    }
+
 }

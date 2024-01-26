@@ -65,6 +65,7 @@ public class WebSecurityConfig { // extends WebSecurityConfigurerAdapter {
                         auth.requestMatchers("/users/login").permitAll()
                                 .requestMatchers("/users/register").permitAll()
                                 .requestMatchers("/users/me").permitAll()
+                                .requestMatchers("/dishes/available").permitAll()
                                 .anyRequest().authenticated()
                 );
 

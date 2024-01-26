@@ -8,6 +8,7 @@ import com.restaurant.repositories.UserRepository;
 import com.restaurant.security.jwt.JwtUtils;
 import com.restaurant.security.services.UserDetailsImpl;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -76,7 +78,7 @@ public class UserController {
                 roles));
     }
 
-    //@PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -126,8 +128,11 @@ public class UserController {
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
-    //@PreAuthorize("hasRole('ADMIN')")
-
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser(HttpServletRequest request, HttpServletResponse response) {
+        new SecurityContextLogoutHandler().logout(request, response, SecurityContextHolder.getContext().getAuthentication());
+        return ResponseEntity.ok(new MessageResponse("User logged out successfully!"));
+    }
 
     @GetMapping("/me")
     public ResponseEntity<?> getMe(HttpServletRequest request) {
