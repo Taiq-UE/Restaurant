@@ -47,11 +47,13 @@ public class Order {
     @Size(max = 255)
     private String additionalNotes;
 
-    @NotBlank
     private String deliveryInfo;
+
     private static int orderCounter = 0;
 
     public Order() {
+        this.orderDate = LocalDateTime.now();
+        this.orderNumber = generateOrderNumber();
     }
 
     public Order(List<String> orderedDishes, EOrderStatus orderStatus, EPaymentType paymentType, EPaymentStatus paymentStatus, double totalCost, EDeliveryMethod deliveryMethod, String additionalNotes, String deliveryInfo) {

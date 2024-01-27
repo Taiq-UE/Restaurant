@@ -7,7 +7,9 @@ import com.restaurant.models.Enums.ECategory;
 import com.restaurant.models.Enums.ERole;
 import com.restaurant.models.Role;
 import com.restaurant.models.User;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -150,11 +152,11 @@ public class KioskApplication extends Application {
     private Label totalCaloriesLabel = new Label("Total calories: 0 kcal");
     private void updateTotalPrice() {
         double totalPrice = cart.entrySet().stream().mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue()).sum();
-        totalPriceLabel.setText("Total price: " + String.format("%.2f", totalPrice) + " zł");
+        totalPriceLabel.setText("Cena całkowita: " + String.format("%.2f", totalPrice) + " zł");
         totalPriceLabel.setFont(new Font(20));
 
         int totalCalories = cart.entrySet().stream().mapToInt(entry -> entry.getKey().getCalories() * entry.getValue()).sum();
-        totalCaloriesLabel.setText("Total calories: " + totalCalories + " kcal");
+        totalCaloriesLabel.setText("Kalorie: " + totalCalories + " kcal");
         totalCaloriesLabel.setFont(new Font(20));
 
         updateCartView();
@@ -263,9 +265,12 @@ public class KioskApplication extends Application {
                     alert.setHeaderText("Postępuj zgodnie z instrukcjami na terminalu");
                     alert.show();
 
+                    Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(3), ae -> alert.close()));
+                    timeline.play();
+
                     PauseTransition delay = new PauseTransition(Duration.seconds(3));
-                    delay.setOnFinished( eventBox -> alert.close() );
-                    delay.play();
+//                    delay.setOnFinished( eventBox -> alert.close() );
+//                    delay.play();
 
                     // Odtwarzanie dźwięku
                     javafx.scene.media.Media sound = new javafx.scene.media.Media(getClass().getResource("/sounds/payment.mp3").toExternalForm());
@@ -279,9 +284,12 @@ public class KioskApplication extends Application {
                             transactionAlert.setTitle("Płatność kartą");
                             transactionAlert.setHeaderText("Transakcja przebiegła pomyślnie");
                             transactionAlert.setContentText("Odbierz paragon i numer zamówienia");
-                            transactionAlert.showAndWait();
+                            transactionAlert.show();
 
-                            PauseTransition delayAfterAlert = new PauseTransition(Duration.seconds(3));
+                            Timeline transactionTimeline = new Timeline(new KeyFrame(Duration.seconds(3), ae -> transactionAlert.close()));
+                            transactionTimeline.play();
+                            printReceipt();
+                            PauseTransition delayAfterAlert = new PauseTransition(Duration.seconds(1));
                             delayAfterAlert.setOnFinished(eventAfterAlert -> {
                                 cart.clear();
                                 updateTotalPrice();
@@ -357,15 +365,19 @@ public class KioskApplication extends Application {
         }
     }
 
-    private void createMenuScreen(VBox vbox) {
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<List<Dish>>() {});
-        if (dishResponse.getStatusCode() == HttpStatus.OK) {
-            List<Dish> dishes = dishResponse.getBody();
-            assert dishes != null;
-            GridPane gridPane = createGridPaneForDishes(dishes);
-            vbox.getChildren().add(gridPane);
+    private void printReceipt() {
+        System.out.println("====================================");
+        System.out.println("Paragon");
+        System.out.println("====================================");
+        for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
+            Dish dish = entry.getKey();
+            Integer quantity = entry.getValue();
+            System.out.println(dish.getDishName() + " x"  + quantity + String.format(" - %.2f", dish.getPrice()*quantity) + " zł");
         }
+        System.out.println("------------------------------------");
+        System.out.println(totalPriceLabel.getText());
+        System.out.println(totalCaloriesLabel.getText());
+        System.out.println("====================================");
     }
 
     public static void main(String[] args) {
