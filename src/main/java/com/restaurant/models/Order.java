@@ -4,13 +4,19 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.restaurant.models.Enums.*;
+import com.restaurant.repositories.OrderRepository;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "orders")
@@ -20,14 +26,19 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int orderId;
 
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "OrderDishes",
+            joinColumns = @JoinColumn(name = "order_id"),
+            inverseJoinColumns = @JoinColumn(name = "dish_id")
+    )
+    private List<Dish> orderedDishes;
+
     @NotNull
     private int orderNumber;
 
     @NotNull
     private LocalDateTime orderDate;
-
-    @ElementCollection
-    private List<String> orderedDishes;
 
     @Enumerated(EnumType.STRING)
     private EOrderStatus orderStatus;
@@ -53,25 +64,30 @@ public class Order {
 
     public Order() {
         this.orderDate = LocalDateTime.now();
-        this.orderNumber = generateOrderNumber();
+        this.orderedDishes = new ArrayList<>();
+        this.totalCost = calculateTotalCost();
     }
 
-    public Order(List<String> orderedDishes, EOrderStatus orderStatus, EPaymentType paymentType, EPaymentStatus paymentStatus, double totalCost, EDeliveryMethod deliveryMethod, String additionalNotes, String deliveryInfo) {
-        this.orderNumber = generateOrderNumber();
+    public Order(List<Dish> orderedDishes, EOrderStatus orderStatus, EPaymentType paymentType, EPaymentStatus paymentStatus, EDeliveryMethod deliveryMethod, String additionalNotes, String deliveryInfo) {
         this.orderDate = LocalDateTime.now();
         this.orderedDishes = orderedDishes;
         this.orderStatus = orderStatus;
         this.paymentType = paymentType;
         this.paymentStatus = paymentStatus;
-        this.totalCost = totalCost;
+        this.totalCost = calculateTotalCost();
         this.deliveryMethod = deliveryMethod;
         this.additionalNotes = additionalNotes;
         this.deliveryInfo = deliveryInfo;
     }
 
-    private static synchronized int generateOrderNumber() {
-        orderCounter = (orderCounter % 100) + 1;
-        return orderCounter;
+
+    public double calculateTotalCost() {
+        Map<Dish, Long> dishCounts = orderedDishes.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+        return dishCounts.entrySet().stream()
+                .mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue())
+                .sum();
     }
 
     public int getOrderId() {
@@ -98,11 +114,11 @@ public class Order {
         this.orderDate = orderDate;
     }
 
-    public List<String> getOrderedDishes() {
+    public List<Dish> getOrderedDishes() {
         return orderedDishes;
     }
 
-    public void setOrderedDishes(List<String> orderedDishes) {
+    public void setOrderedDishes(List<Dish> orderedDishes) {
         this.orderedDishes = orderedDishes;
     }
 

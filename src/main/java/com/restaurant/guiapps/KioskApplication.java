@@ -1,10 +1,11 @@
 package com.restaurant.guiapps;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.models.Dish;
-import com.restaurant.models.Enums.ECategory;
-import com.restaurant.models.Enums.ERole;
+import com.restaurant.models.Enums.*;
+import com.restaurant.models.Order;
 import com.restaurant.models.Role;
 import com.restaurant.models.User;
 import javafx.animation.KeyFrame;
@@ -41,6 +42,7 @@ public class KioskApplication extends Application {
     private VBox cartVBox = new VBox();
     private VBox orderButtonBox = new VBox();
     private TabPane tabPane = new TabPane();
+    private String jwtToken;
     @Override
     public void start(Stage primaryStage) {
         TextField usernameField = new TextField();
@@ -67,6 +69,15 @@ public class KioskApplication extends Application {
             ResponseEntity<String> response = restTemplate.exchange("http://localhost:8080/users/login", HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
+                String responseBody = response.getBody();
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode jsonNode;
+                try {
+                    jsonNode = objectMapper.readTree(responseBody);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+                jwtToken = jsonNode.get("accessToken").asText();
                 User user = null;
                 try {
                     user = new ObjectMapper().readValue(response.getBody(), User.class);
@@ -84,7 +95,7 @@ public class KioskApplication extends Application {
             }
         });
 
-        Scene scene = new Scene(vbox, 620, 820);
+        Scene scene = new Scene(vbox, 650, 820);
         primaryStage.setTitle("Kiosk Application");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -247,7 +258,7 @@ public class KioskApplication extends Application {
 // Ustawiamy odstęp między elementami na nowym VBox
                 newSceneVbox.setSpacing(10);
 
-                Scene scene = new Scene(newSceneVbox, 620, 820);
+                Scene scene = new Scene(newSceneVbox, 650, 820);
                 primaryStage.setScene(scene);
                 primaryStage.show();
 
@@ -285,6 +296,38 @@ public class KioskApplication extends Application {
                             transactionAlert.setHeaderText("Transakcja przebiegła pomyślnie");
                             transactionAlert.setContentText("Odbierz paragon i numer zamówienia");
                             transactionAlert.show();
+
+                            Order order = new Order();
+                            List<Dish> orderedDishes = new ArrayList<>();
+                            for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
+                                Dish dish = entry.getKey();
+                                Integer quantity = entry.getValue();
+                                for (int i = 0; i < quantity; i++) {
+                                    orderedDishes.add(dish);
+                                }
+                            }
+                            order.setOrderedDishes(orderedDishes);
+                            order.setTotalCost(order.calculateTotalCost());
+                            order.setOrderStatus(EOrderStatus.PLACED);
+                            order.setPaymentType(EPaymentType.CARD);
+                            order.setPaymentStatus(EPaymentStatus.PAID);
+                            order.setDeliveryMethod(EDeliveryMethod.PICKUP);
+                            order.setAdditionalNotes(" ");
+                            order.setDeliveryInfo(" ");
+                            System.out.println(order.getOrderNumber());
+
+                            // Tworzenie żądania HTTP POST do zapisania zamówienia
+                            HttpHeaders headers = new HttpHeaders();
+                            headers.setContentType(MediaType.APPLICATION_JSON);
+                            headers.setBearerAuth(jwtToken); // Dodajemy token JWT do nagłówków
+                            HttpEntity<Order> entity = new HttpEntity<>(order, headers);
+                            ResponseEntity<Order> response = restTemplate.exchange("http://localhost:8080/orders", HttpMethod.POST, entity, Order.class);
+
+                            if (response.getStatusCode() == HttpStatus.CREATED) {
+                                System.out.println("Zamówienie zostało pomyślnie zapisane w bazie danych.");
+                            } else {
+                                System.out.println("Nie udało się zapisać zamówienia w bazie danych.");
+                            }
 
                             Timeline transactionTimeline = new Timeline(new KeyFrame(Duration.seconds(3), ae -> transactionAlert.close()));
                             transactionTimeline.play();
@@ -359,7 +402,7 @@ public class KioskApplication extends Application {
             newVbox.getChildren().add(totalCaloriesLabel);
             newVbox.getChildren().add(cartButton);
 
-            Scene scene = new Scene(newVbox, 620, 820);
+            Scene scene = new Scene(newVbox, 640, 820);
             primaryStage.setScene(scene);
             primaryStage.show();
         }

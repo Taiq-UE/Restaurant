@@ -15,6 +15,9 @@ public class Dish {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int dishId;
 
+    @ManyToMany(mappedBy = "orderedDishes")
+    private List<Order> orders;
+
     @NotBlank
     @Size(max = 50)
     private String dishName;
