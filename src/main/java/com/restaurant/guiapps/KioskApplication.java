@@ -30,18 +30,16 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
-import javax.print.attribute.standard.Media;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class KioskApplication extends Application {
 
     private static final int MAX_QUANTITY_PER_PRODUCT = 20;
-    private Map<Dish, Integer> cart = new HashMap<>();
-    private Label totalPriceLabel = new Label("Total price: 0.00 zł");
-    private VBox cartVBox = new VBox();
-    private VBox orderButtonBox = new VBox();
-    private TabPane tabPane = new TabPane();
+    private final Map<Dish, Integer> cart = new HashMap<>();
+    private final Label totalPriceLabel = new Label("Total price: 0.00 zł");
+    private final VBox cartVBox = new VBox();
+    private final VBox orderButtonBox = new VBox();
     private String jwtToken;
     @Override
     public void start(Stage primaryStage) {
@@ -78,7 +76,7 @@ public class KioskApplication extends Application {
                     throw new RuntimeException(e);
                 }
                 jwtToken = jsonNode.get("accessToken").asText();
-                User user = null;
+                User user;
                 try {
                     user = new ObjectMapper().readValue(response.getBody(), User.class);
                 } catch (JsonProcessingException e) {
@@ -87,10 +85,10 @@ public class KioskApplication extends Application {
                 Set<Role> roles = user.getRoles();
                 List<ERole> eRoles = roles.stream()
                         .map(Role::getName)
-                        .collect(Collectors.toList());
+                        .toList();
                 if (eRoles.contains(ERole.ROLE_EMPLOYEE) || eRoles.contains(ERole.ROLE_ADMIN)) {
                     vbox.getChildren().clear();
-                    postLoginProcess(vbox, primaryStage, restTemplate);
+                    postLoginProcess(primaryStage, restTemplate);
                 }
             }
         });
@@ -112,11 +110,11 @@ public class KioskApplication extends Application {
         for (Dish dish : dishes) {
             Label dishNameLabel = new Label(dish.getDishName());
             dishNameLabel.setFont(new Font(20));
-            Label dishPriceLabel = new Label(String.valueOf(dish.getPrice()) + " zł");
+            Label dishPriceLabel = new Label(dish.getPrice() + " zł");
             dishPriceLabel.setFont(new Font(20));
 
             String imagePath = dish.getImageAddress().replaceFirst("src/main/resources", "");
-            Image dishImage = new Image(getClass().getResource(imagePath).toExternalForm());
+            Image dishImage = new Image(Objects.requireNonNull(getClass().getResource(imagePath)).toExternalForm());
             ImageView dishImageView = new ImageView(dishImage);
             dishImageView.setFitWidth(300);
             dishImageView.setFitHeight(300);
@@ -138,9 +136,7 @@ public class KioskApplication extends Application {
                         quantityAlert.showAndWait();
                     } else {
                         cart.put(dish, currentQuantity + 1);
-                        if (totalPriceLabel != null) {
-                            updateTotalPrice();
-                        }
+                        updateTotalPrice();
                     }
                 }
             });
@@ -160,7 +156,7 @@ public class KioskApplication extends Application {
         return gridPane;
     }
 
-    private Label totalCaloriesLabel = new Label("Total calories: 0 kcal");
+    private final Label totalCaloriesLabel = new Label("Total calories: 0 kcal");
     private void updateTotalPrice() {
         double totalPrice = cart.entrySet().stream().mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue()).sum();
         totalPriceLabel.setText("Cena całkowita: " + String.format("%.2f", totalPrice) + " zł");
@@ -227,7 +223,7 @@ public class KioskApplication extends Application {
         cartVBox.getChildren().add(orderButtonBox);
     }
 
-    private void postLoginProcess(VBox vbox, Stage primaryStage, RestTemplate restTemplate) {
+    private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
         Button cartButton = new Button("Koszyk");
         VBox newVbox = new VBox();
         newVbox.setPadding(new Insets(10));
@@ -267,7 +263,7 @@ public class KioskApplication extends Application {
                     cart.clear();
                     updateTotalPrice();
                     newVbox.getChildren().clear();
-                    postLoginProcess(vbox, primaryStage, restTemplate);
+                    postLoginProcess(primaryStage, restTemplate);
                 });
 
                 payWithCardButton.setOnAction(event -> {
@@ -284,78 +280,115 @@ public class KioskApplication extends Application {
 //                    delay.play();
 
                     // Odtwarzanie dźwięku
-                    javafx.scene.media.Media sound = new javafx.scene.media.Media(getClass().getResource("/sounds/payment.mp3").toExternalForm());
+                    javafx.scene.media.Media sound = new javafx.scene.media.Media(Objects.requireNonNull(getClass().getResource("/sounds/payment.mp3")).toExternalForm());
                     MediaPlayer mediaPlayer = new MediaPlayer(sound);
                     mediaPlayer.play();
 
 
-                    delay.setOnFinished( eventDelay -> {
-                        Platform.runLater(() -> {
-                            Alert transactionAlert = new Alert(Alert.AlertType.INFORMATION);
-                            transactionAlert.setTitle("Płatność kartą");
-                            transactionAlert.setHeaderText("Transakcja przebiegła pomyślnie");
-                            transactionAlert.setContentText("Odbierz paragon i numer zamówienia");
-                            transactionAlert.show();
+                    delay.setOnFinished( eventDelay -> Platform.runLater(() -> {
+                        Alert transactionAlert = new Alert(Alert.AlertType.INFORMATION);
+                        transactionAlert.setTitle("Płatność kartą");
+                        transactionAlert.setHeaderText("Transakcja przebiegła pomyślnie");
+                        transactionAlert.setContentText("Odbierz paragon i numer zamówienia");
+                        transactionAlert.show();
 
-                            Order order = new Order();
-                            List<Dish> orderedDishes = new ArrayList<>();
-                            for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
-                                Dish dish = entry.getKey();
-                                Integer quantity = entry.getValue();
-                                for (int i = 0; i < quantity; i++) {
-                                    orderedDishes.add(dish);
-                                }
+                        Order order = new Order();
+                        List<Dish> orderedDishes = new ArrayList<>();
+                        for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
+                            Dish dish = entry.getKey();
+                            Integer quantity = entry.getValue();
+                            for (int i = 0; i < quantity; i++) {
+                                orderedDishes.add(dish);
                             }
-                            order.setOrderedDishes(orderedDishes);
-                            order.setTotalCost(order.calculateTotalCost());
-                            order.setOrderStatus(EOrderStatus.PLACED);
-                            order.setPaymentType(EPaymentType.CARD);
-                            order.setPaymentStatus(EPaymentStatus.PAID);
-                            order.setDeliveryMethod(EDeliveryMethod.PICKUP);
-                            order.setAdditionalNotes(" ");
-                            order.setDeliveryInfo(" ");
-                            System.out.println(order.getOrderNumber());
+                        }
+                        order.setOrderedDishes(orderedDishes);
+                        order.setTotalCost(order.calculateTotalCost());
+                        order.setOrderStatus(EOrderStatus.PLACED);
+                        order.setPaymentType(EPaymentType.CARD);
+                        order.setPaymentStatus(EPaymentStatus.PAID);
+                        order.setDeliveryMethod(EDeliveryMethod.PICKUP);
+                        order.setAdditionalNotes(" ");
+                        order.setDeliveryInfo(" ");
+                        System.out.println(order.getOrderNumber());
 
-                            // Tworzenie żądania HTTP POST do zapisania zamówienia
-                            HttpHeaders headers = new HttpHeaders();
-                            headers.setContentType(MediaType.APPLICATION_JSON);
-                            headers.setBearerAuth(jwtToken); // Dodajemy token JWT do nagłówków
-                            HttpEntity<Order> entity = new HttpEntity<>(order, headers);
-                            ResponseEntity<Order> response = restTemplate.exchange("http://localhost:8080/orders", HttpMethod.POST, entity, Order.class);
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setContentType(MediaType.APPLICATION_JSON);
+                        headers.setBearerAuth(jwtToken);
+                        HttpEntity<Order> entity = new HttpEntity<>(order, headers);
+                        ResponseEntity<Order> response = restTemplate.exchange("http://localhost:8080/orders", HttpMethod.POST, entity, Order.class);
 
-                            if (response.getStatusCode() == HttpStatus.CREATED) {
-                                System.out.println("Zamówienie zostało pomyślnie zapisane w bazie danych.");
-                            } else {
-                                System.out.println("Nie udało się zapisać zamówienia w bazie danych.");
-                            }
-
-                            Timeline transactionTimeline = new Timeline(new KeyFrame(Duration.seconds(3), ae -> transactionAlert.close()));
-                            transactionTimeline.play();
+                        if (response.getStatusCode() == HttpStatus.CREATED) {
                             printReceipt();
-                            PauseTransition delayAfterAlert = new PauseTransition(Duration.seconds(1));
-                            delayAfterAlert.setOnFinished(eventAfterAlert -> {
-                                cart.clear();
-                                updateTotalPrice();
-                                newVbox.getChildren().clear();
-                                postLoginProcess(vbox, primaryStage, restTemplate);
-                            });
-                            delayAfterAlert.play();
+                            Order savedOrder = response.getBody();
+                            assert savedOrder != null;
+                            printOrderNumber(savedOrder, true);
+                        } else {
+                            System.out.println("Nie udało się zapisać zamówienia w bazie danych.");
+                        }
+
+                        Timeline transactionTimeline = new Timeline(new KeyFrame(Duration.seconds(3), ae -> transactionAlert.close()));
+                        transactionTimeline.play();
+
+                        PauseTransition delayAfterAlert = new PauseTransition(Duration.seconds(1));
+                        delayAfterAlert.setOnFinished(eventAfterAlert -> {
+                            cart.clear();
+                            updateTotalPrice();
+                            newVbox.getChildren().clear();
+                            postLoginProcess(primaryStage, restTemplate);
                         });
-                    });
+                        delayAfterAlert.play();
+                    }));
                     delay.play();
                 });
 
-//                newVbox.setSpacing(10);
-//                newVbox.getChildren().addAll(payWithCardButton, payWithCashButton, cancelOrderButton);
-//
-//
-//
-//                VBox newSceneVbox = new VBox();
-//                newSceneVbox.getChildren().addAll(newVbox.getChildren());
-//
-//                Scene scene = new Scene(newSceneVbox, 620, 820);
-//                primaryStage.setScene(scene);
-//                primaryStage.show();
+                payWithCashButton.setOnAction(event -> {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Płatność gotówką");
+                    alert.setHeaderText("Odbierz numer zamówienia i podejdź do kasy");
+                    alert.show();
+
+                    Timeline delay = new Timeline(new KeyFrame(Duration.seconds(3), ae -> Platform.runLater(() -> {
+                        alert.close();
+
+                        Order order = new Order();
+                        List<Dish> orderedDishes = new ArrayList<>();
+                        for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
+                            Dish dish = entry.getKey();
+                            Integer quantity = entry.getValue();
+                            for (int i = 0; i < quantity; i++) {
+                                orderedDishes.add(dish);
+                            }
+                        }
+                        order.setOrderedDishes(orderedDishes);
+                        order.setTotalCost(order.calculateTotalCost());
+                        order.setOrderStatus(EOrderStatus.PLACED);
+                        order.setPaymentType(EPaymentType.CASH);
+                        order.setPaymentStatus(EPaymentStatus.UNPAID);
+                        order.setDeliveryMethod(EDeliveryMethod.PICKUP);
+                        order.setAdditionalNotes(" ");
+                        order.setDeliveryInfo(" ");
+
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setContentType(MediaType.APPLICATION_JSON);
+                        headers.setBearerAuth(jwtToken);
+                        HttpEntity<Order> entity = new HttpEntity<>(order, headers);
+                        ResponseEntity<Order> response = restTemplate.exchange("http://localhost:8080/orders", HttpMethod.POST, entity, Order.class);
+
+                        if (response.getStatusCode() == HttpStatus.CREATED) {
+                            Order savedOrder = response.getBody();
+                            assert savedOrder != null;
+                            printOrderNumber(savedOrder, false);
+                        } else {
+                            System.out.println("Nie udało się zapisać zamówienia w bazie danych.");
+                        }
+
+                        cart.clear();
+                        updateTotalPrice();
+                        newVbox.getChildren().clear();
+                        postLoginProcess(primaryStage, restTemplate);
+                    })));
+                    delay.play();
+                });
             }
         });
 
@@ -365,7 +398,8 @@ public class KioskApplication extends Application {
 
         Tab cartTab = new Tab("Koszyk");
 
-        ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<List<Dish>>() {});
+        ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<>() {
+        });
         if (dishResponse.getStatusCode() == HttpStatus.OK) {
             List<Dish> dishes = dishResponse.getBody();
             assert dishes != null;
@@ -393,9 +427,7 @@ public class KioskApplication extends Application {
             cartTab.setContent(cartVBox);
             tabPane.getTabs().add(cartTab);
 
-            cartButton.setOnAction(cartEvent -> {
-                tabPane.getSelectionModel().select(cartTab);
-            });
+            cartButton.setOnAction(cartEvent -> tabPane.getSelectionModel().select(cartTab));
 
             newVbox.getChildren().add(tabPane);
             newVbox.getChildren().add(totalPriceLabel);
@@ -421,6 +453,20 @@ public class KioskApplication extends Application {
         System.out.println(totalPriceLabel.getText());
         System.out.println(totalCaloriesLabel.getText());
         System.out.println("====================================");
+    }
+
+    private void printOrderNumber(Order order, boolean paid) {
+        System.out.println("====================================");
+        System.out.println("Numer zamówienia");
+        System.out.println("====================================");
+        System.out.println("Zamówienie nr: " + order.getOrderNumber());
+        System.out.println("====================================");
+        if (paid) {
+            System.out.println("Odbierz zamówienie w punkcie odbioru");
+        } else {
+            System.out.println("Zapłać za zamówienie w kasie");
+        }
+        System.out.println("====================================\n\n\n\n\n");
     }
 
     public static void main(String[] args) {
