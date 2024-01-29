@@ -1,8 +1,12 @@
 package com.restaurant.controllers;
 
+import com.restaurant.models.Enums.ERole;
+import com.restaurant.models.Role;
 import com.restaurant.models.User;
 import com.restaurant.payload.JwtResponse;
 import com.restaurant.payload.LoginRequest;
+import com.restaurant.payload.MessageResponse;
+import com.restaurant.payload.SignupRequest;
 import com.restaurant.repositories.RoleRepository;
 import com.restaurant.repositories.UserRepository;
 import com.restaurant.security.jwt.JwtUtils;
@@ -13,7 +17,6 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -26,10 +29,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import com.restaurant.models.Enums.ERole;
-import com.restaurant.models.Role;
-import com.restaurant.payload.SignupRequest;
-import com.restaurant.payload.MessageResponse;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -61,7 +60,7 @@ public class UserController {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(new JwtResponse(jwt,
@@ -131,8 +130,7 @@ public class UserController {
         String jwt = parseJwt(request);
         if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication.getPrincipal() instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            if (authentication.getPrincipal() instanceof UserDetailsImpl userDetails) {
                 List<String> roles = userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList());

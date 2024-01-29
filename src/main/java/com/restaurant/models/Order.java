@@ -60,7 +60,6 @@ public class Order {
 
     private String deliveryInfo;
 
-    private static int orderCounter = 0;
 
     public Order() {
         this.orderDate = LocalDateTime.now();

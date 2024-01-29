@@ -186,7 +186,7 @@ public class KioskApplication extends Application {
             Button removeButton = new Button("Usuń");
             removeButton.setOnAction(event -> {
                 cart.remove(dish);
-                updateTotalPrice(); // Aktualizujemy widok koszyka po usunięciu produktu
+                updateTotalPrice();
             });
 
             Button changeQuantityButton = new Button("Zmień ilość");
@@ -303,7 +303,7 @@ public class KioskApplication extends Application {
                         }
                         order.setOrderedDishes(orderedDishes);
                         order.setTotalCost(order.calculateTotalCost());
-                        order.setOrderStatus(EOrderStatus.PLACED);
+                        order.setOrderStatus(EOrderStatus.PREPARING);
                         order.setPaymentType(EPaymentType.CARD);
                         order.setPaymentStatus(EPaymentStatus.PAID);
                         order.setDeliveryMethod(EDeliveryMethod.PICKUP);
