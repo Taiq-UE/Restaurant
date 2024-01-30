@@ -40,6 +40,7 @@ public class KioskApplication extends Application {
     private final Label totalPriceLabel = new Label("Total price: 0.00 zł");
     private final VBox cartVBox = new VBox();
     private final VBox orderButtonBox = new VBox();
+    private final TextArea additionalNotesTextArea = new TextArea();
     private String jwtToken;
     @Override
     public void start(Stage primaryStage) {
@@ -220,6 +221,11 @@ public class KioskApplication extends Application {
             dishBox.setSpacing(10);
             cartVBox.getChildren().add(dishBox);
         }
+        additionalNotesTextArea.setPromptText("Additional notes");
+
+        // Add the TextArea to the cartVBox
+        cartVBox.getChildren().add(additionalNotesTextArea);
+
         cartVBox.getChildren().add(orderButtonBox);
     }
 
@@ -261,6 +267,7 @@ public class KioskApplication extends Application {
                 cancelOrderButton.setOnAction(cancelEvent -> {
                     // Użytkownik anulował zamówienie, więc wracamy do menu głównego z wyzerowanym koszykiem
                     cart.clear();
+                    additionalNotesTextArea.clear();
                     updateTotalPrice();
                     newVbox.getChildren().clear();
                     postLoginProcess(primaryStage, restTemplate);
@@ -307,7 +314,7 @@ public class KioskApplication extends Application {
                         order.setPaymentType(EPaymentType.CARD);
                         order.setPaymentStatus(EPaymentStatus.PAID);
                         order.setDeliveryMethod(EDeliveryMethod.PICKUP);
-                        order.setAdditionalNotes(" ");
+                        order.setAdditionalNotes(additionalNotesTextArea.getText());
                         order.setDeliveryInfo(" ");
                         System.out.println(order.getOrderNumber());
 
@@ -332,6 +339,7 @@ public class KioskApplication extends Application {
                         PauseTransition delayAfterAlert = new PauseTransition(Duration.seconds(1));
                         delayAfterAlert.setOnFinished(eventAfterAlert -> {
                             cart.clear();
+                            additionalNotesTextArea.clear();
                             updateTotalPrice();
                             newVbox.getChildren().clear();
                             postLoginProcess(primaryStage, restTemplate);
@@ -365,7 +373,7 @@ public class KioskApplication extends Application {
                         order.setPaymentType(EPaymentType.CASH);
                         order.setPaymentStatus(EPaymentStatus.UNPAID);
                         order.setDeliveryMethod(EDeliveryMethod.PICKUP);
-                        order.setAdditionalNotes(" ");
+                        order.setAdditionalNotes(additionalNotesTextArea.getText());
                         order.setDeliveryInfo(" ");
 
                         HttpHeaders headers = new HttpHeaders();
@@ -383,6 +391,7 @@ public class KioskApplication extends Application {
                         }
 
                         cart.clear();
+                        additionalNotesTextArea.clear();
                         updateTotalPrice();
                         newVbox.getChildren().clear();
                         postLoginProcess(primaryStage, restTemplate);

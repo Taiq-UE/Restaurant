@@ -4,10 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.models.Dish;
-import com.restaurant.models.Enums.EOrderStatus;
-import com.restaurant.models.Enums.EPaymentStatus;
-import com.restaurant.models.Enums.EPaymentType;
-import com.restaurant.models.Enums.ERole;
+import com.restaurant.models.Enums.*;
 import com.restaurant.models.Order;
 import com.restaurant.models.Role;
 import com.restaurant.models.User;
@@ -39,7 +36,10 @@ public class CashierApplication extends Application {
     private final Label totalPriceLabel = new Label();
     private final Label totalCaloriesLabel = new Label();
     private final VBox orderButtonBox = new VBox();
+    private final VBox cartVBox = new VBox();
     private final Tab cartTab = new Tab("CART");
+    private final TabPane tabPane = new TabPane();
+    private final TextArea additionalNotesTextArea = new TextArea();
     private String jwtToken;
 
     @Override
@@ -101,15 +101,11 @@ public class CashierApplication extends Application {
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
         Button payOrderButton = new Button("Opłać zamówienie");
         payOrderButton.setMinSize(310, 150);
-        payOrderButton.setOnAction(event -> {
-            displayUnpaidOrders(primaryStage, restTemplate);
-        });
+        payOrderButton.setOnAction(event -> displayUnpaidOrders(primaryStage, restTemplate));
 
         Button newOrderButton = new Button("Nowe zamówienie");
         newOrderButton.setMinSize(310, 150);
-        newOrderButton.setOnAction(event -> {
-            displayNewOrderMenu(primaryStage, restTemplate);
-        });
+        newOrderButton.setOnAction(event -> displayNewOrderMenu(primaryStage, restTemplate));
 
         HBox hbox = new HBox(payOrderButton, newOrderButton);
         hbox.setPadding(new Insets(10));
@@ -120,30 +116,40 @@ public class CashierApplication extends Application {
     }
 
     private void displayNewOrderMenu(Stage primaryStage, RestTemplate restTemplate) {
-        // Pobierz listę dostępnych dań
+
+        Button backButton = new Button("Cofnij");
+        backButton.setOnAction(event -> {
+            cart.clear();
+            updateCartViewForGridPane();
+
+            int tabIndex = 0;
+            if (tabPane.getTabs().size() > tabIndex) {
+                tabPane.getSelectionModel().select(tabIndex);
+            }
+            postLoginProcess(primaryStage, restTemplate);
+        });
+
+        VBox vbox = new VBox(backButton);
+        vbox.setSpacing(10);
         ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
         if (dishResponse.getStatusCode() == HttpStatus.OK) {
             List<Dish> dishes = dishResponse.getBody();
 
-            // Grupowanie dań według kategorii
             assert dishes != null;
             Map<String, List<Dish>> dishesByCategory = dishes.stream()
                     .collect(Collectors.groupingBy(dish -> dish.getCategory().name())); // Convert ECategory to String
 
             TabPane tabPane = new TabPane();
 
-            // Tworzenie zakładki "ALL" z wszystkimi daniami
             GridPane allDishesGridPane = createGridPaneForDishes(dishes);
             Tab allTab = new Tab("ALL");
             allTab.setContent(allDishesGridPane);
             tabPane.getTabs().add(allTab);
 
-            // Tworzenie zakładki dla każdej kategorii
             for (Map.Entry<String, List<Dish>> entry : dishesByCategory.entrySet()) {
                 String category = entry.getKey();
                 List<Dish> dishesInCategory = entry.getValue();
 
-                // Utwórz zawartość zakładki
                 GridPane gridPane = createGridPaneForDishes(dishesInCategory);
 
                 Tab tab = new Tab(category);
@@ -151,21 +157,51 @@ public class CashierApplication extends Application {
                 tabPane.getTabs().add(tab);
             }
 
-            GridPane cartGridPane = createGridPaneForCart(); // Metoda do implementacji
+            GridPane cartGridPane = createGridPaneForCart();
             cartTab.setContent(cartGridPane);
             tabPane.getTabs().add(cartTab);
 
-            VBox totalsBox = new VBox(totalPriceLabel, totalCaloriesLabel);
+            VBox totalsBox = new VBox(totalPriceLabel, totalCaloriesLabel, orderButtonBox);
             totalsBox.setAlignment(Pos.BOTTOM_LEFT);
 
+            if (!cartVBox.getChildren().contains(additionalNotesTextArea)) {
+                additionalNotesTextArea.setPromptText("Additional notes");
+                cartVBox.getChildren().add(additionalNotesTextArea);
+            }
+
+            additionalNotesTextArea.textProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue.length() > 255) {
+                    additionalNotesTextArea.setText(oldValue);
+                }
+            });
+
+            totalsBox.getChildren().add(cartVBox);
+
+            orderButtonBox.getChildren().clear();
+
             Button placeOrderButton = new Button("Place Order");
+            placeOrderButton.setOnAction(event -> {
+                Order order = new Order();
+                order.setOrderedDishes(cart.keySet().stream().toList());
+                order.setTotalCost(order.calculateTotalCost());
+                order.setOrderStatus(EOrderStatus.PLACED);
+                order.setPaymentStatus(EPaymentStatus.UNPAID);
+                order.setDeliveryMethod(EDeliveryMethod.PICKUP);
+                order.setAdditionalNotes(additionalNotesTextArea.getText());
+                order.setDeliveryInfo(" ");
+                displayPaymentOptions(primaryStage, restTemplate, order, false);
+
+                tabPane.getSelectionModel().select(0);
+                vbox.getChildren().addAll(tabPane, totalsBox);
+            });
             orderButtonBox.getChildren().add(placeOrderButton);
 
             BorderPane mainLayout = new BorderPane();
-            mainLayout.setCenter(tabPane); // TabPane na środku
+            mainLayout.setTop(vbox);
+            mainLayout.setCenter(tabPane);
             mainLayout.setBottom(totalsBox);
 
-            Scene scene = new Scene(mainLayout, 650, 820); // Use mainLayout as the root node
+            Scene scene = new Scene(mainLayout, 650, 820);
             primaryStage.setScene(scene);
         }
     }
@@ -185,26 +221,30 @@ public class CashierApplication extends Application {
 
             Button addButton = new Button("Dodaj");
             addButton.setOnAction(event -> {
-                // Add the dish to the cart with a quantity of 1, or increment the quantity if it's already in the cart
-                cart.put(dish, cart.getOrDefault(dish, 0) + 1);
-                // Update the cart view
-                updateCartViewForGridPane();
+                int currentQuantity = cart.getOrDefault(dish, 0);
+                if (currentQuantity < MAX_QUANTITY_PER_PRODUCT) {
+                    cart.put(dish, currentQuantity + 1);
+                    updateCartViewForGridPane();
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Błąd");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Maksymalna ilość dania to " + MAX_QUANTITY_PER_PRODUCT);
+                    alert.showAndWait();
+                }
             });
 
             Button removeButton = new Button("Usuń");
             removeButton.setOnAction(event -> {
-                // Decrease the quantity of the dish in the cart by 1, or remove it if the quantity is 0
                 int currentQuantity = cart.getOrDefault(dish, 0);
                 if (currentQuantity > 1) {
                     cart.put(dish, currentQuantity - 1);
                 } else {
                     cart.remove(dish);
                 }
-                // Update the cart view
                 updateCartViewForGridPane();
             });
 
-            // Utwórz HBox dla nazwy dania, ceny i przycisków "Dodaj" i "Usuń"
             HBox dishInfoBox = new HBox(dishNameLabel, dishPriceLabel, addButton, removeButton);
             dishInfoBox.setSpacing(10);
 
@@ -247,7 +287,6 @@ public class CashierApplication extends Application {
                         if (newQuantity > 0 && newQuantity <= MAX_QUANTITY_PER_PRODUCT) {
                             cart.put(dish, newQuantity);
                         } else if (newQuantity > MAX_QUANTITY_PER_PRODUCT) {
-                            // Show an error message if the new quantity is greater than 20
                             Alert alert = new Alert(Alert.AlertType.ERROR);
                             alert.setTitle("Błąd");
                             alert.setHeaderText(null);
@@ -257,8 +296,7 @@ public class CashierApplication extends Application {
                             cart.remove(dish);
                         }
                         updateCartViewForGridPane();
-                    } catch (NumberFormatException e) {
-                        // Handle invalid input
+                    } catch (NumberFormatException ignored) {
                     }
                 });
             });
@@ -291,10 +329,8 @@ public class CashierApplication extends Application {
         GridPane cartGridPane = createGridPaneForCart();
         cartTab.setContent(cartGridPane);
 
-        // Check if the cart is empty
         boolean isCartEmpty = cart.isEmpty();
 
-        // Set the disabled property of the "Place Order" button based on whether the cart is empty
         Button placeOrderButton = (Button) orderButtonBox.getChildren().get(0);
         placeOrderButton.setDisable(isCartEmpty);
     }
@@ -323,7 +359,7 @@ public class CashierApplication extends Application {
             Label orderLabel = new Label("Order Number: " + order.getOrderNumber() + ", Total Cost: " + order.getTotalCost());
 
             Button payButton = new Button("Zapłać");
-            payButton.setOnAction(event -> displayPaymentOptions(primaryStage ,restTemplate, order));
+            payButton.setOnAction(event -> displayPaymentOptions(primaryStage ,restTemplate, order, true));
 
             Button cancelButton = new Button("Anuluj zamówienie");
             cancelButton.setOnAction(event -> cancelOrder(restTemplate, order, primaryStage));
@@ -358,9 +394,12 @@ public class CashierApplication extends Application {
         postLoginProcess(primaryStage, restTemplate);
     }
 
-    private void displayPaymentOptions(Stage primaryStage, RestTemplate restTemplate, Order order) {
+    private void displayPaymentOptions(Stage primaryStage, RestTemplate restTemplate, Order order, boolean existingOrder) {
         Stage paymentStage = new Stage();
         paymentStage.setTitle("Payment Options");
+
+        VBox vbox = new VBox();
+        vbox.getChildren().clear();
 
         Button cardPaymentButton = new Button("Płatność kartą");
         cardPaymentButton.setOnAction(event -> {
@@ -369,7 +408,12 @@ public class CashierApplication extends Application {
             mediaPlayer.play();
 
             order.setPaymentType(EPaymentType.CARD);
-            markOrderAsPaid(restTemplate, order);
+            if (existingOrder) {
+                markOrderAsPaid(restTemplate, order);
+            }
+            else {
+                placeOrder(restTemplate, order);
+            }
             paymentStage.close();
             postLoginProcess(primaryStage, restTemplate);
         });
@@ -381,22 +425,66 @@ public class CashierApplication extends Application {
             mediaPlayer.play();
 
             order.setPaymentType(EPaymentType.CASH);
-            markOrderAsPaid(restTemplate, order);
+            if (existingOrder) {
+                markOrderAsPaid(restTemplate, order);
+            }
+            else {
+                placeOrder(restTemplate, order);
+            }
             paymentStage.close();
             postLoginProcess(primaryStage, restTemplate);
         });
 
         Button cancelButton = new Button("Anuluj");
-        cancelButton.setOnAction(event -> {
-            paymentStage.close();
-        });
+        cancelButton.setOnAction(event -> paymentStage.close());
 
-        VBox vbox = new VBox(cardPaymentButton, cashPaymentButton, cancelButton);
+        vbox = new VBox(cardPaymentButton, cashPaymentButton, cancelButton);
         vbox.setSpacing(10);
 
         Scene scene = new Scene(vbox, 200, 100);
         paymentStage.setScene(scene);
         paymentStage.show();
+    }
+
+    private void placeOrder(RestTemplate restTemplate, Order order) {
+        order.setPaymentStatus(EPaymentStatus.PAID);
+        order.setOrderStatus(EOrderStatus.PREPARING);
+
+        // Create a new list to hold the dishes
+        List<Dish> orderedDishes = new ArrayList<>();
+
+        // For each entry in the cart
+        for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
+            // Get the dish and the quantity
+            Dish dish = entry.getKey();
+            int quantity = entry.getValue();
+
+            // Add the dish to the list as many times as the quantity
+            for (int i = 0; i < quantity; i++) {
+                orderedDishes.add(dish);
+            }
+        }
+
+        // Set the ordered dishes in the order
+        order.setOrderedDishes(orderedDishes);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(jwtToken);
+        HttpEntity<Order> entity = new HttpEntity<>(order, headers);
+        ResponseEntity<Order> response = restTemplate.exchange("http://localhost:8080/orders", HttpMethod.POST, entity, Order.class);
+
+        if (response.getStatusCode() == HttpStatus.CREATED) {
+            Order savedOrder = response.getBody();
+            System.out.println("Order placed successfully");
+            printReceipt(order);
+            assert savedOrder != null;
+            printOrderNumber(savedOrder);
+            additionalNotesTextArea.clear();
+            cart.clear();
+        } else {
+            System.out.println("Failed to place order");
+        }
     }
 
     private void markOrderAsPaid(RestTemplate restTemplate, Order order) {
@@ -433,6 +521,16 @@ public class CashierApplication extends Application {
         System.out.println("------------------------------------");
         System.out.println("Total price: " + order.getTotalCost() + " zł");
         System.out.println("====================================");
+    }
+
+    private void printOrderNumber(Order order) {
+        System.out.println("====================================");
+        System.out.println("Numer zamówienia");
+        System.out.println("====================================");
+        System.out.println("Zamówienie nr: " + order.getOrderNumber());
+        System.out.println("====================================");
+        System.out.println("Odbierz zamówienie w punkcie odbioru");
+        System.out.println("====================================\n\n\n\n\n");
     }
 
     public static void main(String[] args) {

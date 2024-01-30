@@ -3,7 +3,6 @@ package com.restaurant.controllers;
 import com.restaurant.exceptions.ResourceNotFoundException;
 import com.restaurant.models.Dish;
 import com.restaurant.models.Enums.EOrderStatus;
-import com.restaurant.models.Enums.EPaymentStatus;
 import com.restaurant.models.Order;
 import com.restaurant.repositories.DishRepository;
 import com.restaurant.repositories.OrderRepository;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -68,6 +66,12 @@ public class OrderController {
         LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
         List<Order> orders = orderRepository.getUnpaidOrdersAfter(oneHourAgo);
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/preparing")
+    public ResponseEntity<List<Order>> getPreparingOrders() {
+        List<Order> preparingOrders = orderRepository.findByOrderStatus(EOrderStatus.PREPARING);
+        return ResponseEntity.ok(preparingOrders);
     }
 
     @PutMapping("/update/{id}")
