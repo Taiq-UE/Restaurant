@@ -70,8 +70,16 @@ public class OrderController {
 
     @GetMapping("/preparing")
     public ResponseEntity<List<Order>> getPreparingOrders() {
-        List<Order> preparingOrders = orderRepository.findByOrderStatus(EOrderStatus.PREPARING);
+        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+        List<Order> preparingOrders = orderRepository.findByOrderStatusAndCreatedAtAfter(EOrderStatus.PREPARING, oneHourAgo);
         return ResponseEntity.ok(preparingOrders);
+    }
+
+    @GetMapping("/ready")
+    public ResponseEntity<List<Order>> getReadyOrders() {
+        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+        List<Order> readyOrders = orderRepository.findByOrderStatusAndCreatedAtAfter(EOrderStatus.READY, oneHourAgo);
+        return ResponseEntity.ok(readyOrders);
     }
 
     @PutMapping("/update/{id}")

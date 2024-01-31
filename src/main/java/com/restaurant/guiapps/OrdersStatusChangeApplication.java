@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class KitchenApplication extends Application {
+public class OrdersStatusChangeApplication extends Application {
 
     private String jwtToken;
 
@@ -91,7 +91,7 @@ public class KitchenApplication extends Application {
         });
 
         Scene scene = new Scene(vbox, 650, 820);
-        primaryStage.setTitle("Kitchen Application");
+        primaryStage.setTitle("Order status change Application");
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -116,7 +116,7 @@ public class KitchenApplication extends Application {
         headers.set("Authorization", "Bearer " + jwtToken);
         HttpEntity<String> entity = new HttpEntity<>(headers);
         ResponseEntity<List<Order>> response = restTemplate.exchange(
-                "http://localhost:8080/orders/preparing",
+                "http://localhost:8080/orders/ready",
                 HttpMethod.GET,
                 entity,
                 new ParameterizedTypeReference<>() {});
@@ -160,11 +160,11 @@ public class KitchenApplication extends Application {
                 detailsBox.getChildren().addAll(orderIdLabel, dishesBox);
             }
 
-            Button doneButton = new Button("Done");
+            Button doneButton = new Button("Delivered");
             doneButton.setPrefWidth(100);
             doneButton.setPrefHeight(50);
             doneButton.setOnAction(event -> {
-                setOrderStatusReady(restTemplate, order);
+                setOrderStatusDelivered(restTemplate, order);
                 preparingOrders.remove(order);
                 orderDisplay(primaryStage, preparingOrders, restTemplate);
             });
@@ -183,11 +183,11 @@ public class KitchenApplication extends Application {
         primaryStage.show();
     }
 
-    private void setOrderStatusReady(RestTemplate restTemplate, Order order) {
+    private void setOrderStatusDelivered(RestTemplate restTemplate, Order order) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + jwtToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
-        order.setOrderStatus(EOrderStatus.READY);
+        order.setOrderStatus(EOrderStatus.DELIVERED);
         HttpEntity<Order> entity = new HttpEntity<>(order, headers);
         ResponseEntity<Order> response = restTemplate.exchange("http://localhost:8080/orders/update/" + order.getOrderId(), HttpMethod.PUT, entity, Order.class);
 
@@ -198,4 +198,3 @@ public class KitchenApplication extends Application {
     }
 
 }
-

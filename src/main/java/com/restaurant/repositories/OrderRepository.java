@@ -17,4 +17,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> getUnpaidOrdersAfter(@Param("dateTime") LocalDateTime dateTime);
 
     List<Order> findByOrderStatus(EOrderStatus status);
+
+    @Query("SELECT o FROM Order o WHERE o.orderStatus = :status AND o.orderDate >= :dateTime")
+    List<Order> findByOrderStatusAndCreatedAtAfter(@Param("status") EOrderStatus status, @Param("dateTime") LocalDateTime dateTime);
 }

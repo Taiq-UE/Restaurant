@@ -3,8 +3,6 @@ package com.restaurant.guiapps;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.restaurant.models.Dish;
-import com.restaurant.models.Enums.EOrderStatus;
 import com.restaurant.models.Enums.ERole;
 import com.restaurant.models.Order;
 import com.restaurant.models.Role;
@@ -13,9 +11,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.geometry.Insets;
-import javafx.scene.control.*;
 import javafx.scene.Scene;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -24,11 +21,9 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-public class KitchenApplication extends Application {
+public class OrdersStatusApplication extends Application {
 
     private String jwtToken;
 
@@ -91,32 +86,31 @@ public class KitchenApplication extends Application {
         });
 
         Scene scene = new Scene(vbox, 650, 820);
-        primaryStage.setTitle("Kitchen Application");
+        primaryStage.setTitle("Orders status Application");
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
-
         Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
-            List<Order> preparingOrders = getPreparingOrders(restTemplate);
-            orderDisplay(primaryStage, preparingOrders, restTemplate);
+            List<Order> preparingOrders = getOrders(restTemplate, "preparing");
+            List<Order> readyOrders = getOrders(restTemplate, "ready");
+            orderDisplay(primaryStage, preparingOrders, readyOrders);
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
-
 
         VBox vbox = new VBox();
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
     }
 
-    private List<Order> getPreparingOrders(RestTemplate restTemplate) {
+    private List<Order> getOrders(RestTemplate restTemplate, String orderStatus) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + jwtToken);
         HttpEntity<String> entity = new HttpEntity<>(headers);
         ResponseEntity<List<Order>> response = restTemplate.exchange(
-                "http://localhost:8080/orders/preparing",
+                "http://localhost:8080/orders/" + orderStatus,
                 HttpMethod.GET,
                 entity,
                 new ParameterizedTypeReference<>() {});
@@ -127,75 +121,44 @@ public class KitchenApplication extends Application {
         }
     }
 
-    private void orderDisplay(Stage primaryStage, List<Order> preparingOrders, RestTemplate restTemplate) {
-        VBox vbox = new VBox();
-        vbox.setPadding(new Insets(10));
-        vbox.setSpacing(8);
+    private void orderDisplay(Stage primaryStage, List<Order> preparingOrders, List<Order> readyOrders) {
+        VBox leftVbox = new VBox();
+        leftVbox.setPadding(new Insets(10));
+        leftVbox.setSpacing(8);
+
+        Label preparingLabel = new Label("PREPARING");
+        preparingLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #2c2b2b;");
+        leftVbox.getChildren().add(preparingLabel);
 
         for (Order order : preparingOrders) {
-            BorderPane orderPane = new BorderPane();
-            orderPane.setPadding(new Insets(10));
-            orderPane.setStyle("-fx-border-color: black; -fx-border-width: 1; -fx-border-radius: 5;");
-
-            VBox detailsBox = new VBox();
-            Label orderIdLabel = new Label("Order ID: " + order.getOrderId());
-            orderIdLabel.setStyle("-fx-font-size: 20px;");
-            VBox dishesBox = new VBox();
-
-            Map<String, Long> dishCounts = order.getOrderedDishes().stream()
-                    .collect(Collectors.groupingBy(Dish::getDishName, Collectors.counting()));
-
-            for (Map.Entry<String, Long> entry : dishCounts.entrySet()) {
-                Label dishLabel = new Label(entry.getKey() + " - Quantity: " + entry.getValue());
-                dishLabel.setStyle("-fx-font-size: 20px;");
-                dishesBox.getChildren().add(dishLabel);
-            }
-
-            if (!order.getAdditionalNotes().isBlank()) {
-                Label notesLabel = new Label("\nAdditional notes: \n" + order.getAdditionalNotes());
-                notesLabel.setStyle("-fx-font-size: 20px;");
-                detailsBox.getChildren().addAll(orderIdLabel, dishesBox, notesLabel);
-            }
-            else {
-                detailsBox.getChildren().addAll(orderIdLabel, dishesBox);
-            }
-
-            Button doneButton = new Button("Done");
-            doneButton.setPrefWidth(100);
-            doneButton.setPrefHeight(50);
-            doneButton.setOnAction(event -> {
-                setOrderStatusReady(restTemplate, order);
-                preparingOrders.remove(order);
-                orderDisplay(primaryStage, preparingOrders, restTemplate);
-            });
-
-            orderPane.setCenter(detailsBox);
-            orderPane.setRight(doneButton);
-            vbox.getChildren().add(orderPane);
+            Label orderLabel = new Label(String.valueOf(order.getOrderId()));
+            orderLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: #2c2b2b;");
+            leftVbox.getChildren().add(orderLabel);
         }
 
+        VBox rightVbox = new VBox();
+        rightVbox.setPadding(new Insets(10));
+        rightVbox.setSpacing(8);
+
+        Label readyLabel = new Label("READY");
+        readyLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #27d927;");
+        rightVbox.getChildren().add(readyLabel);
+
+        for (Order order : readyOrders) {
+            Label orderLabel = new Label(String.valueOf(order.getOrderId()));
+            orderLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: #27d927;");
+            rightVbox.getChildren().add(orderLabel);
+        }
+
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(leftVbox, rightVbox);
+
         ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setContent(vbox);
+        scrollPane.setContent(splitPane);
         scrollPane.setFitToWidth(true);
 
         Scene scene = new Scene(scrollPane, 650, 820);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
-
-    private void setOrderStatusReady(RestTemplate restTemplate, Order order) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + jwtToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        order.setOrderStatus(EOrderStatus.READY);
-        HttpEntity<Order> entity = new HttpEntity<>(order, headers);
-        ResponseEntity<Order> response = restTemplate.exchange("http://localhost:8080/orders/update/" + order.getOrderId(), HttpMethod.PUT, entity, Order.class);
-
-        if (response.getStatusCode() != HttpStatus.OK) {
-            throw new RuntimeException("Failed to set order status to READY");
-        }
-
-    }
-
 }
-
