@@ -70,4 +70,11 @@ public class DishController {
         dishes.removeIf(dish -> !dish.getIsAvailable());
         return new ResponseEntity<>(dishes, HttpStatus.OK);
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/all")
+    public ResponseEntity<List<Dish>> getAllDishes() {
+        List<Dish> dishes = dishRepository.findAll();
+        return new ResponseEntity<>(dishes, HttpStatus.OK);
+    }
 }
