@@ -10,12 +10,15 @@ import com.restaurant.models.Enums.ERole;
 import com.restaurant.models.Role;
 import com.restaurant.models.User;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,6 +27,7 @@ import java.util.Set;
 
 public class AdminPanelApplication extends Application {
 
+    private static final Logger logger = LoggerFactory.getLogger(AdminPanelApplication.class);
     private String jwtToken;
     
     public static void main(String[] args) {
@@ -31,7 +35,7 @@ public class AdminPanelApplication extends Application {
     }
     
     @Override
-    public void start(Stage stage) throws Exception {
+    public void start(Stage stage) {
         login(stage);
     }
 
@@ -95,19 +99,13 @@ public class AdminPanelApplication extends Application {
 
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
         Button employeesManagementButton = new Button("EMPLOYEES MANAGMENT");
-        employeesManagementButton.setOnAction(event -> {
-            employeesManagement(primaryStage, restTemplate);
-        });
+        employeesManagementButton.setOnAction(event -> employeesManagement(primaryStage, restTemplate));
 
         Button dishesUpdateButton = new Button("DISHES UPDATE");
-        dishesUpdateButton.setOnAction(event -> {
-            dishManagement(primaryStage, restTemplate);
-        });
+        dishesUpdateButton.setOnAction(event -> dishManagement(primaryStage, restTemplate));
 
         Button remoteStartButton = new Button("REMOTE START");
-        remoteStartButton.setOnAction(event -> {
-
-        });
+        remoteStartButton.setOnAction(event -> remoteStartManager(primaryStage, restTemplate));
 
         VBox vbox = new VBox(employeesManagementButton, dishesUpdateButton, remoteStartButton);
         vbox.setPadding(new Insets(10));
@@ -122,19 +120,10 @@ public class AdminPanelApplication extends Application {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private void employeesManagement(Stage primaryStage, RestTemplate restTemplate) {
         Button addEmployeeButton = new Button("ADD EMPLOYEE");
-        addEmployeeButton.setOnAction(event -> {
-            addEmployee(primaryStage, restTemplate);
-        });
+        addEmployeeButton.setOnAction(event -> addEmployee(primaryStage, restTemplate));
 
         Button removeEmployeeButton = new Button("REMOVE EMPLOYEE");
-        removeEmployeeButton.setOnAction(event -> {
-            removeEmployee(primaryStage, restTemplate);
-        });
-
-//        Button updateEmployeeButton = new Button("UPDATE EMPLOYEE");
-//        updateEmployeeButton.setOnAction(event -> {
-//            //updateEmployee(primaryStage, restTemplate);
-//        });
+        removeEmployeeButton.setOnAction(event -> removeEmployee(primaryStage, restTemplate));
 
         Button cancelButton = new Button("CANCEL");
         cancelButton.setOnAction(event -> postLoginProcess(primaryStage, restTemplate));
@@ -222,19 +211,13 @@ public class AdminPanelApplication extends Application {
 
     private void dishManagement(Stage primaryStage, RestTemplate restTemplate) {
         Button addDishButton = new Button("ADD DISH");
-        addDishButton.setOnAction(event -> {
-            addDish(primaryStage, restTemplate);
-        });
+        addDishButton.setOnAction(event -> addDish(primaryStage, restTemplate));
 
         Button removeDishButton = new Button("REMOVE DISH");
-        removeDishButton.setOnAction(event -> {
-            removeDish(primaryStage, restTemplate);
-        });
+        removeDishButton.setOnAction(event -> removeDish(primaryStage, restTemplate));
 
         Button updateAvailabilityButton = new Button("UPDATE AVAILABILITY");
-        updateAvailabilityButton.setOnAction(event -> {
-            updateAvailability(primaryStage, restTemplate);
-        });
+        updateAvailabilityButton.setOnAction(event -> updateAvailability(primaryStage, restTemplate));
 
         Button cancelButton = new Button("CANCEL");
         cancelButton.setOnAction(event -> postLoginProcess(primaryStage, restTemplate));
@@ -306,7 +289,8 @@ public class AdminPanelApplication extends Application {
             ObjectMapper objectMapper = new ObjectMapper();
             List<Dish> dishes;
             try {
-                dishes = objectMapper.readValue(response.getBody(), new TypeReference<List<Dish>>(){});
+                dishes = objectMapper.readValue(response.getBody(), new TypeReference<>() {
+                });
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -353,7 +337,8 @@ public class AdminPanelApplication extends Application {
             ObjectMapper objectMapper = new ObjectMapper();
             List<Dish> dishes;
             try {
-                dishes = objectMapper.readValue(response.getBody(), new TypeReference<List<Dish>>(){});
+                dishes = objectMapper.readValue(response.getBody(), new TypeReference<>() {
+                });
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -393,5 +378,78 @@ public class AdminPanelApplication extends Application {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private void remoteStartManager(Stage primaryStage, RestTemplate restTemplate) {
+
+        Button ordersStatusButton = new Button("ORDERS STATUS");
+        ordersStatusButton.setOnAction(event -> {
+            OrdersStatusApplication app = new OrdersStatusApplication();
+            Platform.runLater(() -> {
+                try {
+                    Stage newStage = new Stage();
+                    app.remoteLogin(newStage, new RestTemplate(), jwtToken);
+                } catch (Exception e) {
+                    logger.error("Error during remote login", e);
+                }
+            });
+        });
+
+        Button ordersStatusChangeButton = new Button("ORDERS STATUS CHANGE");
+        ordersStatusChangeButton.setOnAction(event -> Platform.runLater(() -> {
+            try {
+                Stage newStage = new Stage();
+                OrdersStatusChangeApplication app = new OrdersStatusChangeApplication();
+                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
+            } catch (Exception e) {
+                logger.error("Error during remote login", e);
+            }
+        }));
+
+        Button kitchenButton = new Button("KITCHEN");
+        kitchenButton.setOnAction(event -> Platform.runLater(() -> {
+            try {
+                Stage newStage = new Stage();
+                KitchenApplication app = new KitchenApplication();
+                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
+            } catch (Exception e) {
+                logger.error("Error during remote login", e);
+            }
+        }));
+
+        Button cashRegisterButton = new Button("CASH REGISTER");
+        cashRegisterButton.setOnAction(event -> Platform.runLater(() -> {
+            try {
+                Stage newStage = new Stage();
+                CashierApplication app = new CashierApplication();
+                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
+            } catch (Exception e) {
+                logger.error("Error during remote login", e);
+            }
+        }));
+
+        Button kioskButton = new Button("KIOSK");
+        kioskButton.setOnAction(event -> Platform.runLater(() -> {
+            try {
+                Stage newStage = new Stage();
+                KioskApplication app = new KioskApplication();
+                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
+            } catch (Exception e) {
+                logger.error("Error during remote login", e);
+            }
+        }));
+
+        Button cancelButton = new Button("CANCEL");
+        cancelButton.setOnAction(event -> postLoginProcess(primaryStage, restTemplate));
+
+        VBox vbox = new VBox(ordersStatusButton, ordersStatusChangeButton, kitchenButton, cashRegisterButton, kioskButton, cancelButton);
+        vbox.setPadding(new Insets(10));
+        vbox.setSpacing(8);
+
+        Scene scene = new Scene(vbox, 650, 820);
+        primaryStage.setTitle("Remote Start Manager");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 }

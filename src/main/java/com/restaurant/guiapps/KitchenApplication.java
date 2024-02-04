@@ -96,6 +96,11 @@ public class KitchenApplication extends Application {
         primaryStage.show();
     }
 
+    void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
+        jwtToken = jwt;
+        postLoginProcess(primaryStage, restTemplate);
+    }
+
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
 
         Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
@@ -105,10 +110,16 @@ public class KitchenApplication extends Application {
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
 
+        primaryStage.setOnCloseRequest(event -> timeline.stop());
 
         VBox vbox = new VBox();
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
+
+        Scene scene = new Scene(vbox, 650, 820);
+        primaryStage.setTitle("Kitchen Application");
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
     private List<Order> getPreparingOrders(RestTemplate restTemplate) {

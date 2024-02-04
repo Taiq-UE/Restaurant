@@ -98,7 +98,14 @@ public class CashierApplication extends Application {
         primaryStage.show();
     }
 
+    void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
+        jwtToken = jwt;
+        postLoginProcess(primaryStage, restTemplate);
+        System.out.println("Cashier");
+    }
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
+        System.out.println("postLogin");
+
         Button payOrderButton = new Button("Opłać zamówienie");
         payOrderButton.setMinSize(310, 150);
         payOrderButton.setOnAction(event -> displayUnpaidOrders(primaryStage, restTemplate));
@@ -112,7 +119,9 @@ public class CashierApplication extends Application {
         hbox.setSpacing(10);
 
         Scene scene = new Scene(hbox, 650, 820);
+        primaryStage.setTitle("Cashier Application");
         primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
     private void displayNewOrderMenu(Stage primaryStage, RestTemplate restTemplate) {

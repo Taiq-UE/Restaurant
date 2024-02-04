@@ -100,6 +100,11 @@ public class KioskApplication extends Application {
         primaryStage.show();
     }
 
+    void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
+        jwtToken = jwt;
+        postLoginProcess(primaryStage, restTemplate);
+    }
+
     private GridPane createGridPaneForDishes(List<Dish> dishes) {
         GridPane gridPane = new GridPane();
         gridPane.setHgap(10);
@@ -261,6 +266,7 @@ public class KioskApplication extends Application {
                 newSceneVbox.setSpacing(10);
 
                 Scene scene = new Scene(newSceneVbox, 650, 820);
+                primaryStage.setTitle("Kiosk Application");
                 primaryStage.setScene(scene);
                 primaryStage.show();
 
@@ -444,6 +450,7 @@ public class KioskApplication extends Application {
             newVbox.getChildren().add(cartButton);
 
             Scene scene = new Scene(newVbox, 640, 820);
+            primaryStage.setTitle("Kiosk Application");
             primaryStage.setScene(scene);
             primaryStage.show();
         }
