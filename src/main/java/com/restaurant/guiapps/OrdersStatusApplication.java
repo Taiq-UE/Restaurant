@@ -25,7 +25,9 @@ import java.util.Set;
 
 public class OrdersStatusApplication extends Application {
 
+    private VBox ordersVBox;
     private String jwtToken;
+    private Stage primaryStage;
 
     public static void main(String[] args) {
         launch(args);
@@ -34,6 +36,7 @@ public class OrdersStatusApplication extends Application {
     @Override
     public void start(Stage primaryStage) {
         login(primaryStage);
+        this.primaryStage = primaryStage;
     }
 
     private void login(Stage primaryStage) {
@@ -93,27 +96,35 @@ public class OrdersStatusApplication extends Application {
 
     void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
         jwtToken = jwt;
+        this.primaryStage = primaryStage;
         postLoginProcess(primaryStage, restTemplate);
     }
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
+
+        ordersVBox = new VBox();
+        VBox vbox = new VBox(ordersVBox);
+        vbox.setPadding(new Insets(10));
+        vbox.setSpacing(8);
+
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setContent(vbox);
+        scrollPane.setFitToWidth(true);
+
+        Scene scene = new Scene(scrollPane, 650, 820);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Order Status Application");
+        primaryStage.show();
+
         Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             List<Order> preparingOrders = getOrders(restTemplate, "preparing");
             List<Order> readyOrders = getOrders(restTemplate, "ready");
-            orderDisplay(primaryStage, preparingOrders, readyOrders);
+            ordersVBox.getChildren().clear();
+            orderDisplay(preparingOrders, readyOrders);
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
 
         primaryStage.setOnCloseRequest(event -> timeline.stop());
-
-        VBox vbox = new VBox();
-        vbox.setPadding(new Insets(10));
-        vbox.setSpacing(8);
-
-        Scene scene = new Scene(vbox, 650, 820);
-        primaryStage.setTitle("Orders status Application");
-        primaryStage.setScene(scene);
-        primaryStage.show();
     }
 
     private List<Order> getOrders(RestTemplate restTemplate, String orderStatus) {
@@ -132,7 +143,7 @@ public class OrdersStatusApplication extends Application {
         }
     }
 
-    private void orderDisplay(Stage primaryStage, List<Order> preparingOrders, List<Order> readyOrders) {
+    private void orderDisplay(List<Order> preparingOrders, List<Order> readyOrders) {
         VBox leftVbox = new VBox();
         leftVbox.setPadding(new Insets(10));
         leftVbox.setSpacing(8);
@@ -164,12 +175,11 @@ public class OrdersStatusApplication extends Application {
         SplitPane splitPane = new SplitPane();
         splitPane.getItems().addAll(leftVbox, rightVbox);
 
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setContent(splitPane);
-        scrollPane.setFitToWidth(true);
-
-        Scene scene = new Scene(scrollPane, 650, 820);
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        ordersVBox.getChildren().add(splitPane);
     }
+
+    public void closeWindow() {
+        primaryStage.close();
+    }
+
 }

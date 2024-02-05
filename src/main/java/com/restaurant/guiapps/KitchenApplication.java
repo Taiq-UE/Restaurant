@@ -30,7 +30,9 @@ import java.util.stream.Collectors;
 
 public class KitchenApplication extends Application {
 
+    private VBox ordersVBox;
     private String jwtToken;
+    private Stage primaryStage;
 
     public static void main(String[] args) {
         launch(args);
@@ -39,6 +41,7 @@ public class KitchenApplication extends Application {
     @Override
     public void start(Stage primaryStage) {
         login(primaryStage);
+        this.primaryStage = primaryStage;
     }
 
     private void login(Stage primaryStage) {
@@ -85,7 +88,7 @@ public class KitchenApplication extends Application {
                         .toList();
                 if (eRoles.contains(ERole.ROLE_EMPLOYEE) || eRoles.contains(ERole.ROLE_ADMIN)) {
                     vbox.getChildren().clear();
-                    postLoginProcess(primaryStage, restTemplate);
+                    postLoginProcess(primaryStage, restTemplate, vbox);
                 }
             }
         });
@@ -98,28 +101,36 @@ public class KitchenApplication extends Application {
 
     void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
         jwtToken = jwt;
-        postLoginProcess(primaryStage, restTemplate);
+        VBox vbox = new VBox();
+        vbox.setPadding(new Insets(10));
+        vbox.setSpacing(8);
+        this.primaryStage = primaryStage;
+        postLoginProcess(primaryStage, restTemplate, vbox);
     }
 
-    private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
+    private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate, VBox vbox) {
+
+        ordersVBox = new VBox();
+        vbox.getChildren().add(ordersVBox);
+
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setContent(vbox);
+        scrollPane.setFitToWidth(true);
+
+        Scene scene = new Scene(scrollPane, 650, 820);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Kitchen Application");
+        primaryStage.show();
 
         Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             List<Order> preparingOrders = getPreparingOrders(restTemplate);
-            orderDisplay(primaryStage, preparingOrders, restTemplate);
+            ordersVBox.getChildren().clear();
+            orderDisplay(preparingOrders, restTemplate);
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
 
         primaryStage.setOnCloseRequest(event -> timeline.stop());
-
-        VBox vbox = new VBox();
-        vbox.setPadding(new Insets(10));
-        vbox.setSpacing(8);
-
-        Scene scene = new Scene(vbox, 650, 820);
-        primaryStage.setTitle("Kitchen Application");
-        primaryStage.setScene(scene);
-        primaryStage.show();
     }
 
     private List<Order> getPreparingOrders(RestTemplate restTemplate) {
@@ -138,7 +149,7 @@ public class KitchenApplication extends Application {
         }
     }
 
-    private void orderDisplay(Stage primaryStage, List<Order> preparingOrders, RestTemplate restTemplate) {
+    private void orderDisplay(List<Order> preparingOrders, RestTemplate restTemplate) {
         VBox vbox = new VBox();
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
@@ -177,21 +188,22 @@ public class KitchenApplication extends Application {
             doneButton.setOnAction(event -> {
                 setOrderStatusReady(restTemplate, order);
                 preparingOrders.remove(order);
-                orderDisplay(primaryStage, preparingOrders, restTemplate);
+                orderDisplay(preparingOrders, restTemplate);
             });
 
             orderPane.setCenter(detailsBox);
             orderPane.setRight(doneButton);
             vbox.getChildren().add(orderPane);
+            ordersVBox.getChildren().add(orderPane);
         }
 
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setContent(vbox);
-        scrollPane.setFitToWidth(true);
-
-        Scene scene = new Scene(scrollPane, 650, 820);
-        primaryStage.setScene(scene);
-        primaryStage.show();
+//        ScrollPane scrollPane = new ScrollPane();
+//        scrollPane.setContent(vbox);
+//        scrollPane.setFitToWidth(true);
+//
+//        Scene scene = new Scene(scrollPane, 650, 820);
+//        primaryStage.setScene(scene);
+//        primaryStage.show();
     }
 
     private void setOrderStatusReady(RestTemplate restTemplate, Order order) {
@@ -208,5 +220,8 @@ public class KitchenApplication extends Application {
 
     }
 
+    public void closeWindow() {
+        primaryStage.close();
+    }
 }
 

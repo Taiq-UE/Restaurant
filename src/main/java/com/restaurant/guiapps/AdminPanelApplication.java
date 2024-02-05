@@ -107,7 +107,13 @@ public class AdminPanelApplication extends Application {
         Button remoteStartButton = new Button("REMOTE START");
         remoteStartButton.setOnAction(event -> remoteStartManager(primaryStage, restTemplate));
 
-        VBox vbox = new VBox(employeesManagementButton, dishesUpdateButton, remoteStartButton);
+        Button logoutButton = new Button("LOG OUT");
+        logoutButton.setOnAction(event -> {
+            jwtToken = null;
+            login(primaryStage);
+        });
+
+        VBox vbox = new VBox(employeesManagementButton, dishesUpdateButton, remoteStartButton, logoutButton);
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
 
@@ -377,70 +383,117 @@ public class AdminPanelApplication extends Application {
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    private OrdersStatusApplication ordersStatusApp;
+    private OrdersStatusChangeApplication ordersStatusChangeApp;
+    private KitchenApplication kitchenApp;
+    private CashierApplication cashierApp;
+    private KioskApplication kioskApp;
     private void remoteStartManager(Stage primaryStage, RestTemplate restTemplate) {
 
         Button ordersStatusButton = new Button("ORDERS STATUS");
         ordersStatusButton.setOnAction(event -> {
-            OrdersStatusApplication app = new OrdersStatusApplication();
+            ordersStatusApp = new OrdersStatusApplication(); // Zapisz referencję do aplikacji
             Platform.runLater(() -> {
                 try {
                     Stage newStage = new Stage();
-                    app.remoteLogin(newStage, new RestTemplate(), jwtToken);
+                    ordersStatusApp.remoteLogin(newStage, new RestTemplate(), jwtToken);
                 } catch (Exception e) {
                     logger.error("Error during remote login", e);
                 }
             });
         });
 
-        Button ordersStatusChangeButton = new Button("ORDERS STATUS CHANGE");
-        ordersStatusChangeButton.setOnAction(event -> Platform.runLater(() -> {
-            try {
-                Stage newStage = new Stage();
-                OrdersStatusChangeApplication app = new OrdersStatusChangeApplication();
-                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
-            } catch (Exception e) {
-                logger.error("Error during remote login", e);
+        Button ordersStatusStopButton = new Button("STOP ORDERS STATUS");
+        ordersStatusStopButton.setOnAction(event -> {
+            if (ordersStatusApp != null) {
+                ordersStatusApp.closeWindow();
             }
-        }));
+        });
+
+        Button ordersStatusChangeButton = new Button("ORDERS STATUS CHANGE");
+        ordersStatusChangeButton.setOnAction(event -> {
+            ordersStatusChangeApp = new OrdersStatusChangeApplication(); // Zapisz referencję do aplikacji
+            Platform.runLater(() -> {
+                try {
+                    Stage newStage = new Stage();
+                    ordersStatusChangeApp.remoteLogin(newStage, new RestTemplate(), jwtToken);
+                } catch (Exception e) {
+                    logger.error("Error during remote login", e);
+                }
+            });
+        });
+
+        Button ordersStatusChangeStopButton = new Button("STOP ORDERS STATUS CHANGE"); // Nowy przycisk do zatrzymania
+        ordersStatusChangeStopButton.setOnAction(event -> {
+            if (ordersStatusChangeApp != null) {
+                ordersStatusChangeApp.closeWindow(); // Wywołaj metodę closeWindow na aplikacji
+            }
+        });
 
         Button kitchenButton = new Button("KITCHEN");
-        kitchenButton.setOnAction(event -> Platform.runLater(() -> {
-            try {
-                Stage newStage = new Stage();
-                KitchenApplication app = new KitchenApplication();
-                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
-            } catch (Exception e) {
-                logger.error("Error during remote login", e);
+        kitchenButton.setOnAction(event -> {
+            kitchenApp = new KitchenApplication(); // Zapisz referencję do aplikacji
+            Platform.runLater(() -> {
+                try {
+                    Stage newStage = new Stage();
+                    kitchenApp.remoteLogin(newStage, new RestTemplate(), jwtToken);
+                } catch (Exception e) {
+                    logger.error("Error during remote login", e);
+                }
+            });
+        });
+
+        Button kitchenStopButton = new Button("STOP KITCHEN");
+        kitchenStopButton.setOnAction(event -> {
+            if (kitchenApp != null) {
+                kitchenApp.closeWindow();
             }
-        }));
+        });
 
         Button cashRegisterButton = new Button("CASH REGISTER");
-        cashRegisterButton.setOnAction(event -> Platform.runLater(() -> {
-            try {
-                Stage newStage = new Stage();
-                CashierApplication app = new CashierApplication();
-                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
-            } catch (Exception e) {
-                logger.error("Error during remote login", e);
+        cashRegisterButton.setOnAction(event -> {
+            cashierApp = new CashierApplication(); // Zapisz referencję do aplikacji
+            Platform.runLater(() -> {
+                try {
+                    Stage newStage = new Stage();
+                    cashierApp.remoteLogin(newStage, new RestTemplate(), jwtToken);
+                } catch (Exception e) {
+                    logger.error("Error during remote login", e);
+                }
+            });
+        });
+
+        Button cashRegisterStopButton = new Button("STOP CASH REGISTER"); // Nowy przycisk do zatrzymania
+        cashRegisterStopButton.setOnAction(event -> {
+            if (cashierApp != null) {
+                cashierApp.closeWindow(); // Wywołaj metodę closeWindow na aplikacji
             }
-        }));
+        });
 
         Button kioskButton = new Button("KIOSK");
-        kioskButton.setOnAction(event -> Platform.runLater(() -> {
-            try {
-                Stage newStage = new Stage();
-                KioskApplication app = new KioskApplication();
-                app.remoteLogin(newStage, new RestTemplate(), jwtToken);
-            } catch (Exception e) {
-                logger.error("Error during remote login", e);
+        kioskButton.setOnAction(event -> {
+            kioskApp = new KioskApplication(); // Zapisz referencję do aplikacji
+            Platform.runLater(() -> {
+                try {
+                    Stage newStage = new Stage();
+                    kioskApp.remoteLogin(newStage, new RestTemplate(), jwtToken);
+                } catch (Exception e) {
+                    logger.error("Error during remote login", e);
+                }
+            });
+        });
+
+        Button kioskStopButton = new Button("STOP KIOSK");
+        kioskStopButton.setOnAction(event -> {
+            if (kioskApp != null) {
+                kioskApp.closeWindow();
             }
-        }));
+        });
 
         Button cancelButton = new Button("CANCEL");
         cancelButton.setOnAction(event -> postLoginProcess(primaryStage, restTemplate));
 
-        VBox vbox = new VBox(ordersStatusButton, ordersStatusChangeButton, kitchenButton, cashRegisterButton, kioskButton, cancelButton);
+        VBox vbox = new VBox(ordersStatusButton, ordersStatusStopButton, ordersStatusChangeButton, ordersStatusChangeStopButton, kitchenButton, kitchenStopButton, cashRegisterButton, cashRegisterStopButton, kioskButton,kioskStopButton, cancelButton);
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
 
@@ -453,3 +506,5 @@ public class AdminPanelApplication extends Application {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 }
+
+

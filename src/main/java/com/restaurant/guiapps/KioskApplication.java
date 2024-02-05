@@ -41,9 +41,11 @@ public class KioskApplication extends Application {
     private final VBox cartVBox = new VBox();
     private final VBox orderButtonBox = new VBox();
     private final TextArea additionalNotesTextArea = new TextArea();
+    private Stage primaryStage;
     private String jwtToken;
     @Override
     public void start(Stage primaryStage) {
+        this.primaryStage = primaryStage;
         TextField usernameField = new TextField();
         usernameField.setPromptText("Username");
 
@@ -102,6 +104,7 @@ public class KioskApplication extends Application {
 
     void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
         jwtToken = jwt;
+        this.primaryStage = primaryStage;
         postLoginProcess(primaryStage, restTemplate);
     }
 
@@ -487,5 +490,9 @@ public class KioskApplication extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    public void closeWindow() {
+        primaryStage.close();
     }
 }

@@ -30,15 +30,27 @@ import java.util.stream.Collectors;
 
 public class OrdersStatusChangeApplication extends Application {
 
+    private VBox ordersVBox;
+    private Stage primaryStage;
     private String jwtToken;
 
     public static void main(String[] args) {
-        launch(args);
+        if (args.length > 0) {
+            launch(args[0]);
+        } else {
+            launch();
+        }
     }
 
     @Override
     public void start(Stage primaryStage) {
-        login(primaryStage);
+        this.primaryStage = primaryStage;
+        if (!getParameters().getRaw().isEmpty()) {
+            jwtToken = getParameters().getRaw().get(0);
+            remoteLogin(primaryStage, new RestTemplate(), jwtToken);
+        } else {
+            login(primaryStage);
+        }
     }
 
     private void login(Stage primaryStage) {
@@ -98,28 +110,35 @@ public class OrdersStatusChangeApplication extends Application {
 
     void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
         jwtToken = jwt;
+        this.primaryStage = primaryStage;
         postLoginProcess(primaryStage, restTemplate);
     }
 
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
 
+        ordersVBox = new VBox();
+        VBox vbox = new VBox(ordersVBox);
+        vbox.setPadding(new Insets(10));
+        vbox.setSpacing(8);
+
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setContent(vbox);
+        scrollPane.setFitToWidth(true);
+
+        Scene scene = new Scene(scrollPane, 650, 820);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Order Status Change Application");
+        primaryStage.show();
+
         Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             List<Order> preparingOrders = getPreparingOrders(restTemplate);
+            ordersVBox.getChildren().clear();
             orderDisplay(primaryStage, preparingOrders, restTemplate);
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
 
         primaryStage.setOnCloseRequest(event -> timeline.stop());
-
-        VBox vbox = new VBox();
-        vbox.setPadding(new Insets(10));
-        vbox.setSpacing(8);
-
-        Scene scene = new Scene(vbox, 650, 820);
-        primaryStage.setTitle("Orders status change Application");
-        primaryStage.setScene(scene);
-        primaryStage.show();
     }
 
     private List<Order> getPreparingOrders(RestTemplate restTemplate) {
@@ -139,9 +158,7 @@ public class OrdersStatusChangeApplication extends Application {
     }
 
     private void orderDisplay(Stage primaryStage, List<Order> preparingOrders, RestTemplate restTemplate) {
-        VBox vbox = new VBox();
-        vbox.setPadding(new Insets(10));
-        vbox.setSpacing(8);
+        ordersVBox.getChildren().clear(); // clear the VBox before adding new orders
 
         for (Order order : preparingOrders) {
             BorderPane orderPane = new BorderPane();
@@ -182,16 +199,8 @@ public class OrdersStatusChangeApplication extends Application {
 
             orderPane.setCenter(detailsBox);
             orderPane.setRight(doneButton);
-            vbox.getChildren().add(orderPane);
+            ordersVBox.getChildren().add(orderPane);
         }
-
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setContent(vbox);
-        scrollPane.setFitToWidth(true);
-
-        Scene scene = new Scene(scrollPane, 650, 820);
-        primaryStage.setScene(scene);
-        primaryStage.show();
     }
 
     private void setOrderStatusDelivered(RestTemplate restTemplate, Order order) {
@@ -206,6 +215,10 @@ public class OrdersStatusChangeApplication extends Application {
             throw new RuntimeException("Failed to set order status to READY");
         }
 
+    }
+
+    public void closeWindow() {
+        primaryStage.close();
     }
 
 }

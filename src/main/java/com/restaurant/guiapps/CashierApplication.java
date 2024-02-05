@@ -40,10 +40,12 @@ public class CashierApplication extends Application {
     private final Tab cartTab = new Tab("CART");
     private final TabPane tabPane = new TabPane();
     private final TextArea additionalNotesTextArea = new TextArea();
+    private Stage primaryStage;
     private String jwtToken;
 
     @Override
     public void start(Stage primaryStage) {
+        this.primaryStage = primaryStage;
         TextField usernameField = new TextField();
         usernameField.setPromptText("Username");
 
@@ -101,10 +103,9 @@ public class CashierApplication extends Application {
     void remoteLogin(Stage primaryStage, RestTemplate restTemplate, String jwt){
         jwtToken = jwt;
         postLoginProcess(primaryStage, restTemplate);
-        System.out.println("Cashier");
+        this.primaryStage = primaryStage;
     }
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
-        System.out.println("postLogin");
 
         Button payOrderButton = new Button("Opłać zamówienie");
         payOrderButton.setMinSize(310, 150);
@@ -544,5 +545,9 @@ public class CashierApplication extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    public void closeWindow() {
+        primaryStage.close();
     }
 }
