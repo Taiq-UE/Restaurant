@@ -24,6 +24,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class AdminPanelApplication extends Application {
 
@@ -131,10 +132,13 @@ public class AdminPanelApplication extends Application {
         Button removeEmployeeButton = new Button("REMOVE EMPLOYEE");
         removeEmployeeButton.setOnAction(event -> removeEmployee(primaryStage, restTemplate));
 
+        Button displayEmployeesButton = new Button("DISPLAY EMPLOYEES");
+        displayEmployeesButton.setOnAction(event -> displayEmployees(primaryStage, restTemplate));
+
         Button cancelButton = new Button("CANCEL");
         cancelButton.setOnAction(event -> postLoginProcess(primaryStage, restTemplate));
 
-        VBox vbox = new VBox(addEmployeeButton, removeEmployeeButton, cancelButton);
+        VBox vbox = new VBox(addEmployeeButton, removeEmployeeButton, displayEmployeesButton, cancelButton);
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(8);
 
@@ -180,6 +184,44 @@ public class AdminPanelApplication extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
+    }
+
+    private void displayEmployees(Stage primaryStage, RestTemplate restTemplate) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(jwtToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange("http://localhost:8080/users/all", HttpMethod.GET, entity, String.class);
+        if (response.getStatusCode() == HttpStatus.OK) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            List<User> users;
+            try {
+                users = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+
+            VBox vbox = new VBox();
+            vbox.setPadding(new Insets(10));
+            vbox.setSpacing(8);
+
+            for (User user : users) {
+                String roles = user.getRoles().stream()
+                        .map(role -> role.getName().name().substring(5))
+                        .collect(Collectors.joining(", "));
+                vbox.getChildren().add(new Label("Username: " + user.getUsername() + ", Roles: " + roles));
+            }
+
+            Button backButton = new Button("BACK");
+            backButton.setOnAction(event -> employeesManagement(primaryStage, restTemplate));
+
+            vbox.getChildren().add(backButton);
+
+            Scene scene = new Scene(vbox, 650, 820);
+            primaryStage.setTitle("Display Employees");
+            primaryStage.setScene(scene);
+            primaryStage.show();
+        }
     }
 
     private void removeEmployee(Stage primaryStage, RestTemplate restTemplate) {
