@@ -238,34 +238,31 @@ public class KioskApplication extends Application {
     }
 
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
-        Button cartButton = new Button("Koszyk");
+        Button cartButton = new Button("Cart");
         VBox newVbox = new VBox();
         newVbox.setPadding(new Insets(10));
         newVbox.setSpacing(8);
 
-        Button placeOrderButton = new Button("Złóż zamówienie");
+        Button placeOrderButton = new Button("Place order");
         placeOrderButton.setOnAction(placeOrderEvent -> {
             Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmationAlert.setTitle("Potwierdzenie zamówienia");
-            confirmationAlert.setHeaderText("Czy na pewno chcesz złożyć zamówienie?");
+            confirmationAlert.setTitle("Order confirmation");
+            confirmationAlert.setHeaderText("Are you sure you want to place the order?");
 
             Optional<ButtonType> result = confirmationAlert.showAndWait();
             if (result.isPresent() && result.get() == ButtonType.OK) {
 
-                // Użytkownik potwierdził zamówienie, więc zmieniamy całe obecne okno
                 newVbox.getChildren().clear();
 
-                Button payWithCardButton = new Button("Zapłać kartą");
-                Button payWithCashButton = new Button("Zapłać gotówką w kasie");
-                Button cancelOrderButton = new Button("Anuluj zamówienie");
+                Button payWithCardButton = new Button("Card payment");
+                Button payWithCashButton = new Button("Pay with cash at the counter");
+                Button cancelOrderButton = new Button("Cancel order");
 
                 newVbox.getChildren().addAll(payWithCardButton, payWithCashButton, cancelOrderButton);
 
-// Tworzymy nową instancję VBox i kopiujemy do niej zawartość newVbox
                 VBox newSceneVbox = new VBox();
                 newSceneVbox.getChildren().addAll(newVbox.getChildren());
 
-// Ustawiamy odstęp między elementami na nowym VBox
                 newSceneVbox.setSpacing(10);
 
                 Scene scene = new Scene(newSceneVbox, 650, 820);
@@ -274,7 +271,6 @@ public class KioskApplication extends Application {
                 primaryStage.show();
 
                 cancelOrderButton.setOnAction(cancelEvent -> {
-                    // Użytkownik anulował zamówienie, więc wracamy do menu głównego z wyzerowanym koszykiem
                     cart.clear();
                     additionalNotesTextArea.clear();
                     updateTotalPrice();
@@ -284,18 +280,15 @@ public class KioskApplication extends Application {
 
                 payWithCardButton.setOnAction(event -> {
                     Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Płatność kartą");
-                    alert.setHeaderText("Postępuj zgodnie z instrukcjami na terminalu");
+                    alert.setTitle("Card payment");
+                    alert.setHeaderText("Follow the instructions on the terminal");
                     alert.show();
 
                     Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(3), ae -> alert.close()));
                     timeline.play();
 
                     PauseTransition delay = new PauseTransition(Duration.seconds(3));
-//                    delay.setOnFinished( eventBox -> alert.close() );
-//                    delay.play();
 
-                    // Odtwarzanie dźwięku
                     javafx.scene.media.Media sound = new javafx.scene.media.Media(Objects.requireNonNull(getClass().getResource("/sounds/payment.mp3")).toExternalForm());
                     MediaPlayer mediaPlayer = new MediaPlayer(sound);
                     mediaPlayer.play();
@@ -303,9 +296,9 @@ public class KioskApplication extends Application {
 
                     delay.setOnFinished( eventDelay -> Platform.runLater(() -> {
                         Alert transactionAlert = new Alert(Alert.AlertType.INFORMATION);
-                        transactionAlert.setTitle("Płatność kartą");
-                        transactionAlert.setHeaderText("Transakcja przebiegła pomyślnie");
-                        transactionAlert.setContentText("Odbierz paragon i numer zamówienia");
+                        transactionAlert.setTitle("Cart payment");
+                        transactionAlert.setHeaderText("Transaction went successfully");
+                        transactionAlert.setContentText("Collect the receipt and order number");
                         transactionAlert.show();
 
                         Order order = new Order();
@@ -339,7 +332,7 @@ public class KioskApplication extends Application {
                             assert savedOrder != null;
                             printOrderNumber(savedOrder, true);
                         } else {
-                            System.out.println("Nie udało się zapisać zamówienia w bazie danych.");
+                            System.out.println("Failed to save the order in the database.");
                         }
 
                         Timeline transactionTimeline = new Timeline(new KeyFrame(Duration.seconds(3), ae -> transactionAlert.close()));
@@ -360,8 +353,8 @@ public class KioskApplication extends Application {
 
                 payWithCashButton.setOnAction(event -> {
                     Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Płatność gotówką");
-                    alert.setHeaderText("Odbierz numer zamówienia i podejdź do kasy");
+                    alert.setTitle("Cash payment");
+                    alert.setHeaderText("Collect the order number and proceed to the cashier");
                     alert.show();
 
                     Timeline delay = new Timeline(new KeyFrame(Duration.seconds(3), ae -> Platform.runLater(() -> {
@@ -396,7 +389,7 @@ public class KioskApplication extends Application {
                             assert savedOrder != null;
                             printOrderNumber(savedOrder, false);
                         } else {
-                            System.out.println("Nie udało się zapisać zamówienia w bazie danych.");
+                            System.out.println("Failed to save the order in the database.");
                         }
 
                         cart.clear();
@@ -414,7 +407,7 @@ public class KioskApplication extends Application {
             orderButtonBox.getChildren().add(placeOrderButton);
         }
 
-        Tab cartTab = new Tab("Koszyk");
+        Tab cartTab = new Tab("Cart");
 
         ResponseEntity<List<Dish>> dishResponse = restTemplate.exchange("http://localhost:8080/dishes/available", HttpMethod.GET, null, new ParameterizedTypeReference<>() {
         });
@@ -424,7 +417,7 @@ public class KioskApplication extends Application {
 
             TabPane tabPane = new TabPane();
 
-            Tab allDishesTab = new Tab("Wszystkie");
+            Tab allDishesTab = new Tab("All");
             GridPane allDishesGridPane = createGridPaneForDishes(dishes);
             ScrollPane allDishesScrollPane = new ScrollPane(allDishesGridPane);
             allDishesScrollPane.setFitToWidth(true);
@@ -461,7 +454,7 @@ public class KioskApplication extends Application {
 
     private void printReceipt() {
         System.out.println("====================================");
-        System.out.println("Paragon");
+        System.out.println("Receipt");
         System.out.println("====================================");
         for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
             Dish dish = entry.getKey();
@@ -476,14 +469,14 @@ public class KioskApplication extends Application {
 
     private void printOrderNumber(Order order, boolean paid) {
         System.out.println("====================================");
-        System.out.println("Numer zamówienia");
+        System.out.println("Order number");
         System.out.println("====================================");
-        System.out.println("Zamówienie nr: " + order.getOrderNumber());
+        System.out.println(order.getOrderNumber());
         System.out.println("====================================");
         if (paid) {
-            System.out.println("Odbierz zamówienie w punkcie odbioru");
+            System.out.println("Pick up the order at the pickup point");
         } else {
-            System.out.println("Zapłać za zamówienie w kasie");
+            System.out.println("Pay for the order at the cashier");
         }
         System.out.println("====================================\n\n\n\n\n");
     }
