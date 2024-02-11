@@ -107,11 +107,11 @@ public class CashierApplication extends Application {
     }
     private void postLoginProcess(Stage primaryStage, RestTemplate restTemplate) {
 
-        Button payOrderButton = new Button("Opłać zamówienie");
+        Button payOrderButton = new Button("Pay order");
         payOrderButton.setMinSize(310, 150);
         payOrderButton.setOnAction(event -> displayUnpaidOrders(primaryStage, restTemplate));
 
-        Button newOrderButton = new Button("Nowe zamówienie");
+        Button newOrderButton = new Button("New order");
         newOrderButton.setMinSize(310, 150);
         newOrderButton.setOnAction(event -> displayNewOrderMenu(primaryStage, restTemplate));
 
@@ -127,7 +127,7 @@ public class CashierApplication extends Application {
 
     private void displayNewOrderMenu(Stage primaryStage, RestTemplate restTemplate) {
 
-        Button backButton = new Button("Cofnij");
+        Button backButton = new Button("Back");
         backButton.setOnAction(event -> {
             cart.clear();
             updateCartViewForGridPane();
@@ -283,12 +283,12 @@ public class CashierApplication extends Application {
             Label dishLabel = new Label(dish.getDishName() + " - " + String.format("%.2f", dish.getPrice()) + " zł x" + quantity);
             dishLabel.setFont(new Font(20));
 
-            Button changeQuantityButton = new Button("Zmień ilość");
+            Button changeQuantityButton = new Button("Change quantity");
             changeQuantityButton.setOnAction(event -> {
                 TextInputDialog dialog = new TextInputDialog(quantity.toString());
-                dialog.setTitle("Zmień ilość");
-                dialog.setHeaderText("Wprowadź nową ilość dla " + dish.getDishName());
-                dialog.setContentText("Ilość:");
+                dialog.setTitle("Change quantity");
+                dialog.setHeaderText("Provide new quantity for " + dish.getDishName());
+                dialog.setContentText("Quantity:");
 
                 Optional<String> result = dialog.showAndWait();
                 result.ifPresent(s -> {
@@ -298,9 +298,9 @@ public class CashierApplication extends Application {
                             cart.put(dish, newQuantity);
                         } else if (newQuantity > MAX_QUANTITY_PER_PRODUCT) {
                             Alert alert = new Alert(Alert.AlertType.ERROR);
-                            alert.setTitle("Błąd");
+                            alert.setTitle("Error");
                             alert.setHeaderText(null);
-                            alert.setContentText("Maksymalna ilość dania to " + MAX_QUANTITY_PER_PRODUCT);
+                            alert.setContentText("Maximum quantity is " + MAX_QUANTITY_PER_PRODUCT);
                             alert.showAndWait();
                         } else {
                             cart.remove(dish);
@@ -311,7 +311,7 @@ public class CashierApplication extends Application {
                 });
             });
 
-            Button removeButton = new Button("Usuń");
+            Button removeButton = new Button("Delete");
             removeButton.setOnAction(event -> {
                 cart.remove(dish);
                 updateCartViewForGridPane();
@@ -329,11 +329,11 @@ public class CashierApplication extends Application {
 
     private void updateCartViewForGridPane() {
         double totalPrice = cart.entrySet().stream().mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue()).sum();
-        totalPriceLabel.setText("Cena całkowita: " + String.format("%.2f", totalPrice) + " zł");
+        totalPriceLabel.setText("Total value: " + String.format("%.2f", totalPrice) + " zł");
         totalPriceLabel.setFont(new Font(20));
 
         int totalCalories = cart.entrySet().stream().mapToInt(entry -> entry.getKey().getCalories() * entry.getValue()).sum();
-        totalCaloriesLabel.setText("Kalorie: " + totalCalories + " kcal");
+        totalCaloriesLabel.setText("Calories: " + totalCalories + " kcal");
         totalCaloriesLabel.setFont(new Font(20));
 
         GridPane cartGridPane = createGridPaneForCart();
@@ -361,17 +361,17 @@ public class CashierApplication extends Application {
         VBox vbox = new VBox();
         vbox.setSpacing(10);
 
-        Button backButton = new Button("Cofnij");
+        Button backButton = new Button("Back");
         backButton.setOnAction(event -> postLoginProcess(primaryStage, restTemplate));
         vbox.getChildren().add(backButton);
 
         for (Order order : orders) {
             Label orderLabel = new Label("Order Number: " + order.getOrderNumber() + ", Total Cost: " + order.getTotalCost());
 
-            Button payButton = new Button("Zapłać");
+            Button payButton = new Button("Pay");
             payButton.setOnAction(event -> displayPaymentOptions(primaryStage ,restTemplate, order, true));
 
-            Button cancelButton = new Button("Anuluj zamówienie");
+            Button cancelButton = new Button("Cancel order");
             cancelButton.setOnAction(event -> cancelOrder(restTemplate, order, primaryStage));
 
             HBox hbox = new HBox(orderLabel, payButton, cancelButton);
@@ -411,7 +411,7 @@ public class CashierApplication extends Application {
         VBox vbox = new VBox();
         vbox.getChildren().clear();
 
-        Button cardPaymentButton = new Button("Płatność kartą");
+        Button cardPaymentButton = new Button("Card payment");
         cardPaymentButton.setOnAction(event -> {
             javafx.scene.media.Media sound = new javafx.scene.media.Media(Objects.requireNonNull(getClass().getResource("/sounds/payment.mp3")).toExternalForm());
             MediaPlayer mediaPlayer = new MediaPlayer(sound);
@@ -428,7 +428,7 @@ public class CashierApplication extends Application {
             postLoginProcess(primaryStage, restTemplate);
         });
 
-        Button cashPaymentButton = new Button("Płatność gotówką");
+        Button cashPaymentButton = new Button("Cash payment");
         cashPaymentButton.setOnAction(event -> {
             javafx.scene.media.Media sound = new javafx.scene.media.Media(Objects.requireNonNull(getClass().getResource("/sounds/cashregister.mp3")).toExternalForm());
             MediaPlayer mediaPlayer = new MediaPlayer(sound);
@@ -445,7 +445,7 @@ public class CashierApplication extends Application {
             postLoginProcess(primaryStage, restTemplate);
         });
 
-        Button cancelButton = new Button("Anuluj");
+        Button cancelButton = new Button("Cancel");
         cancelButton.setOnAction(event -> paymentStage.close());
 
         vbox = new VBox(cardPaymentButton, cashPaymentButton, cancelButton);
@@ -460,22 +460,17 @@ public class CashierApplication extends Application {
         order.setPaymentStatus(EPaymentStatus.PAID);
         order.setOrderStatus(EOrderStatus.PREPARING);
 
-        // Create a new list to hold the dishes
         List<Dish> orderedDishes = new ArrayList<>();
 
-        // For each entry in the cart
         for (Map.Entry<Dish, Integer> entry : cart.entrySet()) {
-            // Get the dish and the quantity
             Dish dish = entry.getKey();
             int quantity = entry.getValue();
 
-            // Add the dish to the list as many times as the quantity
             for (int i = 0; i < quantity; i++) {
                 orderedDishes.add(dish);
             }
         }
 
-        // Set the ordered dishes in the order
         order.setOrderedDishes(orderedDishes);
 
         HttpHeaders headers = new HttpHeaders();
@@ -517,7 +512,7 @@ public class CashierApplication extends Application {
 
     private void printReceipt(Order order) {
         System.out.println("====================================");
-        System.out.println("Paragon");
+        System.out.println("Receipt");
         System.out.println("====================================");
 
         Map<Dish, Long> dishCounts = order.getOrderedDishes().stream()
@@ -535,11 +530,11 @@ public class CashierApplication extends Application {
 
     private void printOrderNumber(Order order) {
         System.out.println("====================================");
-        System.out.println("Numer zamówienia");
+        System.out.println("Order number");
         System.out.println("====================================");
-        System.out.println("Zamówienie nr: " + order.getOrderNumber());
+        System.out.println(order.getOrderNumber());
         System.out.println("====================================");
-        System.out.println("Odbierz zamówienie w punkcie odbioru");
+        System.out.println("Pick up the order at the pickup point");
         System.out.println("====================================\n\n\n\n\n");
     }
 
