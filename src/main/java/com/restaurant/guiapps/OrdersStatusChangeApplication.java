@@ -158,7 +158,7 @@ public class OrdersStatusChangeApplication extends Application {
     }
 
     private void orderDisplay(Stage primaryStage, List<Order> preparingOrders, RestTemplate restTemplate) {
-        ordersVBox.getChildren().clear(); // clear the VBox before adding new orders
+        ordersVBox.getChildren().clear();
 
         for (Order order : preparingOrders) {
             BorderPane orderPane = new BorderPane();
