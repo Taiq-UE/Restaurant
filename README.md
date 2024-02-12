@@ -16,3 +16,6 @@ Technologies used:
 - JavaFX
 - MySQL database
 - Hibernate
+
+### Usage example
+https://www.youtube.com/watch?v=ww5_1t5n3Fg&ab_channel=Tajaqoo
